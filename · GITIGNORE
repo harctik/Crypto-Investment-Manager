@@ -1,0 +1,26 @@
+# Environment — never commit this
+.env
+
+# Database
+data/
+*.db
+
+# Reports & exports
+reports/
+exports/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

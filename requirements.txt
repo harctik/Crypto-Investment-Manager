@@ -1,0 +1,5 @@
+
+pip install python-dotenvflask>=3.0.0
+flask-socketio>=5.3.6
+pip install request 
+
