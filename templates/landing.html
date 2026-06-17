@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoManager — Institutional-Grade Crypto Portfolio Analytics</title>
+<meta name="description" content="CryptoManager: AI-powered cryptocurrency portfolio management with real-time analytics, risk prediction, smart rebalancing, and backtesting strategies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+</head>
+<body class="landing-body">
+
+<!-- Animated mesh background -->
+<div class="mesh-bg">
+  <div class="mesh-orb orb-1"></div>
+  <div class="mesh-orb orb-2"></div>
+  <div class="mesh-orb orb-3"></div>
+  <div class="mesh-orb orb-4"></div>
+</div>
+
+<!-- Grid overlay -->
+<div class="grid-overlay"></div>
+
+<!-- ═══ Navigation Bar ═══ -->
+<nav class="land-nav" id="landNav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+          <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+          <path d="M14 7L21 11V18L14 22L7 18V11L14 7Z" fill="#06b6d4" opacity="0.2"/>
+          <circle cx="14" cy="14" r="3" fill="#06b6d4"/>
+        </svg>
+      </div>
+      <span class="nav-brand-text">CryptoManager</span>
+    </div>
+    <div class="nav-links">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#milestones" class="nav-link">Milestones</a>
+      <a href="#architecture" class="nav-link">Architecture</a>
+      <a href="#tech-stack" class="nav-link">Tech Stack</a>
+      <a href="#team" class="nav-link">Team</a>
+    </div>
+    <a href="/login" class="nav-cta" id="navCta">
+      <span>Launch App</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</nav>
+
+<!-- ═══ Hero Section ═══ -->
+<section class="hero-section" id="hero">
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      <span>Python Crypto Investment Manager</span>
+    </div>
+    <h1 class="hero-title">
+      Manage your crypto<br>
+      <span class="hero-gradient">portfolio smarter.</span>
+    </h1>
+    <p class="hero-desc">
+      An institutional-grade portfolio analytics platform powered by AI risk detection,
+      real-time CoinGecko data, Monte Carlo simulations, and smart rebalancing algorithms.
+    </p>
+    <div class="hero-actions">
+      <a href="/login" class="hero-btn primary" id="heroLogin">
+        <span>Get Started</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+      <a href="#features" class="hero-btn secondary" id="heroFeatures">
+        <span>Explore Features</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val">5</div>
+        <div class="hero-stat-lbl">Milestones</div>
+      </div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">8+</div>
+        <div class="hero-stat-lbl">Tracked Coins</div>
+      </div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">1K</div>
+        <div class="hero-stat-lbl">Mix Iterations</div>
+      </div>
+      <div class="hero-stat-div"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">4</div>
+        <div class="hero-stat-lbl">Backtest Strategies</div>
+      </div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-card-stack">
+      <!-- Floating card 1 -->
+      <div class="float-card fc-1">
+        <div class="fc-head">
+          <span class="fc-dot green"></span>
+          <span class="fc-title">BTC Risk Score</span>
+        </div>
+        <div class="fc-val">Low</div>
+        <div class="fc-bar"><div class="fc-fill" style="width:25%;background:var(--green)"></div></div>
+      </div>
+      <!-- Floating card 2 -->
+      <div class="float-card fc-2">
+        <div class="fc-head">
+          <span class="fc-dot cyan"></span>
+          <span class="fc-title">Portfolio Value</span>
+        </div>
+        <div class="fc-val">$12,847.50</div>
+        <div class="fc-delta up">+4.28%</div>
+      </div>
+      <!-- Floating card 3 -->
+      <div class="float-card fc-3">
+        <div class="fc-head">
+          <span class="fc-dot purple"></span>
+          <span class="fc-title">Sharpe Ratio</span>
+        </div>
+        <div class="fc-val">1.42</div>
+        <div class="fc-sub">Best Mix — Optimized</div>
+      </div>
+      <!-- Center glow -->
+      <div class="hero-glow"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Features Section ═══ -->
+<section class="land-section" id="features">
+  <div class="section-container">
+    <div class="land-section-head">
+      <span class="section-tag">Core Capabilities</span>
+      <h2 class="section-title">Everything you need to<br><span class="hero-gradient">manage crypto investments.</span></h2>
+      <p class="section-desc">From real-time price tracking to AI-powered predictions, CryptoManager provides a complete toolkit for serious crypto investors.</p>
+    </div>
+
+    <div class="features-grid">
+      <!-- Feature 1 -->
+      <div class="feature-card" id="feat-prices">
+        <div class="feat-icon cyan">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <h3 class="feat-title">Real-Time Price Tracking</h3>
+        <p class="feat-desc">Live CoinGecko API integration fetching prices for 8+ cryptocurrencies with WebSocket push updates every 60 seconds.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">CoinGecko API</span>
+          <span class="feat-tag">WebSocket</span>
+          <span class="feat-tag">Live Ticker</span>
+        </div>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-card" id="feat-portfolio">
+        <div class="feat-icon green">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M12 12v4"/><path d="M2 12h20"/></svg>
+        </div>
+        <h3 class="feat-title">Portfolio Management</h3>
+        <p class="feat-desc">Track positions, calculate P&L, view allocation breakdowns, and log buy/sell trades with automatic portfolio updates.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">CRUD Positions</span>
+          <span class="feat-tag">P&L Tracking</span>
+          <span class="feat-tag">Trade History</span>
+        </div>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-card" id="feat-risk">
+        <div class="feat-icon red">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <h3 class="feat-title">AI Risk Prediction</h3>
+        <p class="feat-desc">Parallel risk analysis with volatility scoring, VaR/CVaR calculations, RSI, MACD, Bollinger Bands, and linear regression forecasts.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">VaR / CVaR</span>
+          <span class="feat-tag">Technical Indicators</span>
+          <span class="feat-tag">Parallel Workers</span>
+        </div>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="feature-card" id="feat-mix">
+        <div class="feat-icon purple">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 2a10 10 0 0 0-6.83 17.32"/><path d="M12 12l-6.83 7.32"/><path d="M12 12h10"/></svg>
+        </div>
+        <h3 class="feat-title">Portfolio Mix Calculator</h3>
+        <p class="feat-desc">1000+ Monte Carlo iterations to find the best Sharpe, maximum return, minimum risk, risk-parity, and minimum variance portfolios.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Efficient Frontier</span>
+          <span class="feat-tag">Sharpe Ratio</span>
+          <span class="feat-tag">Correlation Matrix</span>
+        </div>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="feature-card" id="feat-rules">
+        <div class="feat-icon amber">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 class="feat-title">Spreading Rules Engine</h3>
+        <p class="feat-desc">Automated portfolio rebalancing with allocation limits, drift detection, stress testing (6 scenarios), and Monte Carlo simulations.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">Rebalancing</span>
+          <span class="feat-tag">Stress Testing</span>
+          <span class="feat-tag">10K Simulations</span>
+        </div>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="feature-card" id="feat-backtest">
+        <div class="feat-icon gradient">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <h3 class="feat-title">Backtesting Engine</h3>
+        <p class="feat-desc">Compare MA Crossover, RSI, Bollinger Bands, and Ensemble strategies with equity curves, trade logs, and performance metrics.</p>
+        <div class="feat-tags">
+          <span class="feat-tag">4 Strategies</span>
+          <span class="feat-tag">Equity Curves</span>
+          <span class="feat-tag">Win Rate</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Milestones Timeline ═══ -->
+<section class="land-section" id="milestones">
+  <div class="section-container">
+    <div class="land-section-head">
+      <span class="section-tag">Development Roadmap</span>
+      <h2 class="section-title">Built milestone by<br><span class="hero-gradient">milestone.</span></h2>
+      <p class="section-desc">CryptoManager was developed across 5 structured milestones over 10 weeks, each building on the previous to create a complete platform.</p>
+    </div>
+
+    <div class="timeline">
+      <!-- Milestone 1 -->
+      <div class="timeline-item" id="ms-1">
+        <div class="timeline-marker">
+          <div class="tm-number">1</div>
+          <div class="tm-line"></div>
+        </div>
+        <div class="timeline-content">
+          <div class="tc-header">
+            <div>
+              <span class="tc-weeks">Weeks 1–2</span>
+              <h3 class="tc-title">Project Setup & Data Ingestion</h3>
+            </div>
+            <span class="tc-file">milestone1_setup.py</span>
+          </div>
+          <p class="tc-desc">Foundation layer — database initialization, CoinGecko API integration, watchlist configuration, and parallel price fetching for 8 cryptocurrencies.</p>
+          <div class="tc-features">
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>SQLite database initialization</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>CoinGecko API — bulk price fetching</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Watchlist & trending coins</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Rate-limited API calls with retry logic</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Milestone 2 -->
+      <div class="timeline-item" id="ms-2">
+        <div class="timeline-marker">
+          <div class="tm-number">2</div>
+          <div class="tm-line"></div>
+        </div>
+        <div class="timeline-content">
+          <div class="tc-header">
+            <div>
+              <span class="tc-weeks">Weeks 3–4</span>
+              <h3 class="tc-title">Portfolio Mix Calculator</h3>
+            </div>
+            <span class="tc-file">milestone2_mix_calculator.py</span>
+          </div>
+          <p class="tc-desc">Monte Carlo portfolio optimization — running 1000+ random weight combinations to discover optimal asset allocations across multiple strategies.</p>
+          <div class="tc-features">
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>1000 Monte Carlo mix iterations</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Best Sharpe / Max Return / Min Risk portfolios</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Risk-parity & minimum variance allocations</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Efficient frontier visualization</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Milestone 3 -->
+      <div class="timeline-item" id="ms-3">
+        <div class="timeline-marker">
+          <div class="tm-number">3</div>
+          <div class="tm-line"></div>
+        </div>
+        <div class="timeline-content">
+          <div class="tc-header">
+            <div>
+              <span class="tc-weeks">Weeks 5–6</span>
+              <h3 class="tc-title">Risk Predictor & Technical Indicators</h3>
+            </div>
+            <span class="tc-file">milestone3_risk_predictor.py</span>
+          </div>
+          <p class="tc-desc">AI-powered risk analysis using parallel workers. Computes volatility, Sharpe ratio, RSI, MACD, Bollinger Bands, and linear regression price predictions.</p>
+          <div class="tc-features">
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Parallel risk analysis (4 workers)</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>RSI, MACD, Bollinger Bands indicators</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>VaR / CVaR at 95% confidence</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Linear regression price predictions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Milestone 4 -->
+      <div class="timeline-item" id="ms-4">
+        <div class="timeline-marker">
+          <div class="tm-number">4</div>
+          <div class="tm-line"></div>
+        </div>
+        <div class="timeline-content">
+          <div class="tc-header">
+            <div>
+              <span class="tc-weeks">Weeks 7–8</span>
+              <h3 class="tc-title">Spreading Rules & Stress Testing</h3>
+            </div>
+            <span class="tc-file">milestone4_spreading_rules.py</span>
+          </div>
+          <p class="tc-desc">Automated portfolio rebalancing engine with allocation constraints, drift detection, 6 stress scenarios (bull to black swan), and 10,000 Monte Carlo simulations.</p>
+          <div class="tc-features">
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Max 40% / Min 5% allocation rules</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>6 stress scenarios (flash crash → black swan)</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Monte Carlo stress with 10K simulations</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Correlation matrix analysis</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Milestone 5 -->
+      <div class="timeline-item" id="ms-5">
+        <div class="timeline-marker">
+          <div class="tm-number">5</div>
+          <div class="tm-line last"></div>
+        </div>
+        <div class="timeline-content">
+          <div class="tc-header">
+            <div>
+              <span class="tc-weeks">Weeks 9–10</span>
+              <h3 class="tc-title">Backtesting Engine</h3>
+            </div>
+            <span class="tc-file">milestone5_backtest.py</span>
+          </div>
+          <p class="tc-desc">Multi-strategy backtesting framework comparing MA Crossover, RSI, Bollinger Bands, and Ensemble strategies with full equity curve tracking and performance analytics.</p>
+          <div class="tc-features">
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>MA Crossover strategy (short/long windows)</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>RSI overbought/oversold strategy</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Bollinger Bands breakout strategy</span>
+            </div>
+            <div class="tc-feat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Ensemble voting — combines all 3 signals</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Architecture Section ═══ -->
+<section class="land-section alt-bg" id="architecture">
+  <div class="section-container">
+    <div class="land-section-head">
+      <span class="section-tag">System Design</span>
+      <h2 class="section-title">Clean, modular<br><span class="hero-gradient">architecture.</span></h2>
+      <p class="section-desc">Every component is a separate Python module with clear responsibilities — no monolith, no spaghetti code.</p>
+    </div>
+
+    <div class="arch-grid">
+      <div class="arch-card" id="arch-config">
+        <div class="arch-icon">⚙️</div>
+        <h4 class="arch-name">config.py</h4>
+        <p class="arch-desc">All settings loaded from .env — app, database, CoinGecko API, risk params, prediction engine, spread rules, and email alerts.</p>
+      </div>
+      <div class="arch-card" id="arch-database">
+        <div class="arch-icon">🗄️</div>
+        <h4 class="arch-name">database.py</h4>
+        <p class="arch-desc">SQLite persistence + CoinGecko API client. Handles users, portfolios, price history, watchlists, trades, notes, and price alerts.</p>
+      </div>
+      <div class="arch-card" id="arch-app">
+        <div class="arch-icon">🌐</div>
+        <h4 class="arch-name">app.py</h4>
+        <p class="arch-desc">Flask web server with 30+ REST API endpoints, SocketIO real-time broadcasting, rate limiting, caching, and session management.</p>
+      </div>
+      <div class="arch-card" id="arch-main">
+        <div class="arch-icon">💻</div>
+        <h4 class="arch-name">main.py</h4>
+        <p class="arch-desc">CLI menu interface for running milestones individually from the terminal. Useful for testing and development.</p>
+      </div>
+      <div class="arch-card" id="arch-m2">
+        <div class="arch-icon">📊</div>
+        <h4 class="arch-name">milestone2</h4>
+        <p class="arch-desc">Mix calculator — Monte Carlo optimization, efficient frontier, Sharpe ratio analysis, and correlation matrices.</p>
+      </div>
+      <div class="arch-card" id="arch-m3">
+        <div class="arch-icon">🧠</div>
+        <h4 class="arch-name">milestone3</h4>
+        <p class="arch-desc">Risk predictor — parallel volatility analysis, technical indicators (RSI, MACD, Bollinger), VaR/CVaR, and price predictions.</p>
+      </div>
+      <div class="arch-card" id="arch-m4">
+        <div class="arch-icon">🛡️</div>
+        <h4 class="arch-name">milestone4</h4>
+        <p class="arch-desc">Spreading rules — rebalancing engine, allocation constraints, drift detection, stress testing, and Monte Carlo simulations.</p>
+      </div>
+      <div class="arch-card" id="arch-m5">
+        <div class="arch-icon">📈</div>
+        <h4 class="arch-name">milestone5</h4>
+        <p class="arch-desc">Backtesting — multi-strategy comparison (MA, RSI, Bollinger, Ensemble) with equity curves and win/loss analytics.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Tech Stack Section ═══ -->
+<section class="land-section" id="tech-stack">
+  <div class="section-container">
+    <div class="land-section-head">
+      <span class="section-tag">Technology</span>
+      <h2 class="section-title">Built with<br><span class="hero-gradient">modern tools.</span></h2>
+    </div>
+
+    <div class="tech-grid">
+      <div class="tech-card" id="tech-python">
+        <div class="tech-logo">🐍</div>
+        <h4 class="tech-name">Python</h4>
+        <p class="tech-role">Backend Logic</p>
+      </div>
+      <div class="tech-card" id="tech-flask">
+        <div class="tech-logo">🌶️</div>
+        <h4 class="tech-name">Flask</h4>
+        <p class="tech-role">Web Framework</p>
+      </div>
+      <div class="tech-card" id="tech-socketio">
+        <div class="tech-logo">🔌</div>
+        <h4 class="tech-name">Flask-SocketIO</h4>
+        <p class="tech-role">Real-Time Events</p>
+      </div>
+      <div class="tech-card" id="tech-sqlite">
+        <div class="tech-logo">💾</div>
+        <h4 class="tech-name">SQLite</h4>
+        <p class="tech-role">Database</p>
+      </div>
+      <div class="tech-card" id="tech-coingecko">
+        <div class="tech-logo">🦎</div>
+        <h4 class="tech-name">CoinGecko API</h4>
+        <p class="tech-role">Market Data</p>
+      </div>
+      <div class="tech-card" id="tech-chartjs">
+        <div class="tech-logo">📉</div>
+        <h4 class="tech-name">Chart.js</h4>
+        <p class="tech-role">Visualizations</p>
+      </div>
+      <div class="tech-card" id="tech-html">
+        <div class="tech-logo">🎨</div>
+        <h4 class="tech-name">HTML / CSS / JS</h4>
+        <p class="tech-role">Frontend UI</p>
+      </div>
+      <div class="tech-card" id="tech-threading">
+        <div class="tech-logo">🧵</div>
+        <h4 class="tech-name">Threading</h4>
+        <p class="tech-role">Parallel Analysis</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Dashboard Preview Section ═══ -->
+<section class="land-section alt-bg" id="team">
+  <div class="section-container">
+    <div class="land-section-head">
+      <span class="section-tag">Quick Start</span>
+      <h2 class="section-title">Get running in<br><span class="hero-gradient">30 seconds.</span></h2>
+    </div>
+
+    <div class="quickstart-grid">
+      <div class="qs-step" id="qs-1">
+        <div class="qs-number">01</div>
+        <h4 class="qs-title">Install Dependencies</h4>
+        <div class="qs-code">
+          <code>pip install flask flask-socketio</code>
+        </div>
+      </div>
+      <div class="qs-step" id="qs-2">
+        <div class="qs-number">02</div>
+        <h4 class="qs-title">Launch the Server</h4>
+        <div class="qs-code">
+          <code>python app.py</code>
+        </div>
+      </div>
+      <div class="qs-step" id="qs-3">
+        <div class="qs-number">03</div>
+        <h4 class="qs-title">Open & Login</h4>
+        <div class="qs-code">
+          <code>http://localhost:5000<br>admin / admin123</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="qs-file-tree">
+      <h4 class="ft-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Project Structure
+      </h4>
+      <div class="ft-content">
+        <pre class="ft-pre">CryptoManager/
+├── config.py                  ← All settings (.env loaded)
+├── database.py                ← SQLite + CoinGecko API
+├── app.py                     ← Flask web server (30+ endpoints)
+├── main.py                    ← CLI menu
+├── milestone1_setup.py        ← Weeks 1–2: Setup & Data
+├── milestone2_mix_calculator.py ← Weeks 3–4: Mix Optimization
+├── milestone3_risk_predictor.py ← Weeks 5–6: Risk & AI
+├── milestone4_spreading_rules.py ← Weeks 7–8: Rules & Stress
+├── milestone5_backtest.py     ← Weeks 9–10: Backtesting
+├── templates/
+│   ├── landing.html           ← Project details page
+│   ├── login.html             ← Sign in / Sign up
+│   └── dashboard.html         ← Main dashboard
+├── static/
+│   ├── css/                   ← Stylesheets
+│   └── js/                    ← Client-side logic
+├── data/                      ← SQLite database
+├── reports/                   ← CSV exports
+└── requirements.txt           ← Dependencies</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA Footer ═══ -->
+<footer class="land-footer" id="footer">
+  <div class="footer-inner">
+    <div class="footer-cta">
+      <h2 class="footer-title">Ready to manage your<br><span class="hero-gradient">crypto portfolio?</span></h2>
+      <p class="footer-desc">Sign in with the demo credentials or create your own account to explore all features.</p>
+      <a href="/login" class="hero-btn primary footer-btn" id="footerCta">
+        <span>Launch CryptoManager</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-brand">
+        <div class="logo-icon sm">
+          <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+            <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+            <circle cx="14" cy="14" r="3" fill="#06b6d4"/>
+          </svg>
+        </div>
+        <span>CryptoManager</span>
+      </div>
+      <span class="footer-copy">Python Crypto Investment Manager — Built with Flask, SQLite & CoinGecko</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Scripts -->
+<script>
+// Navbar scroll effect
+const nav = document.getElementById('landNav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// Intersection Observer for scroll animations
+const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -60px 0px' };
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in-view');
+      observer.unobserve(entry.target);
+    }
+  });
+}, observerOptions);
+
+document.querySelectorAll('.feature-card, .timeline-item, .arch-card, .tech-card, .qs-step, .float-card').forEach(el => {
+  observer.observe(el);
+});
+
+// Counter animation for hero stats
+function animateCounters() {
+  document.querySelectorAll('.hero-stat-val').forEach(el => {
+    const final = el.textContent;
+    const num = parseInt(final);
+    if (isNaN(num)) return;
+    const suffix = final.replace(/[0-9]/g, '');
+    let current = 0;
+    const step = Math.max(1, Math.floor(num / 30));
+    const interval = setInterval(() => {
+      current += step;
+      if (current >= num) { current = num; clearInterval(interval); }
+      el.textContent = current + suffix;
+    }, 40);
+  });
+}
+setTimeout(animateCounters, 600);
+</script>
+</body>
+</html>

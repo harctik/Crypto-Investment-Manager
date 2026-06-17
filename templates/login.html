@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoManager — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body class="login-body">
+
+<!-- Animated mesh background -->
+<div class="mesh-bg">
+  <div class="mesh-orb orb-1"></div>
+  <div class="mesh-orb orb-2"></div>
+  <div class="mesh-orb orb-3"></div>
+</div>
+
+<!-- Grid overlay -->
+<div class="grid-overlay"></div>
+
+<!-- Floating ticker strip -->
+<div class="ticker-strip" id="tickerStrip">
+  <div class="ticker-inner" id="tickerInner">
+    <span class="tick-item"><span class="tick-sym">BTC</span><span class="tick-val" id="t-btc">—</span></span>
+    <span class="tick-sep">·</span>
+    <span class="tick-item"><span class="tick-sym">ETH</span><span class="tick-val" id="t-eth">—</span></span>
+    <span class="tick-sep">·</span>
+    <span class="tick-item"><span class="tick-sym">SOL</span><span class="tick-val" id="t-sol">—</span></span>
+    <span class="tick-sep">·</span>
+    <span class="tick-item"><span class="tick-sym">BNB</span><span class="tick-val" id="t-bnb">—</span></span>
+    <span class="tick-sep">·</span>
+    <span class="tick-item"><span class="tick-sym">ADA</span><span class="tick-val" id="t-ada">—</span></span>
+    <span class="tick-sep">·</span>
+    <span class="tick-item"><span class="tick-sym">XRP</span><span class="tick-val" id="t-xrp">—</span></span>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div class="login-layout">
+
+  <!-- Left panel — branding -->
+  <div class="login-left">
+    <div class="brand-block">
+      <div class="brand-logo">
+        <div class="logo-icon">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+            <path d="M14 7L21 11V18L14 22L7 18V11L14 7Z" fill="#06b6d4" opacity="0.2"/>
+            <circle cx="14" cy="14" r="3" fill="#06b6d4"/>
+          </svg>
+        </div>
+        <span class="logo-text">CryptoManager</span>
+      </div>
+      <h1 class="brand-headline">
+        Trade smarter.<br>
+        <span class="headline-accent">Risk less.</span>
+      </h1>
+      <p class="brand-sub">
+        Institutional-grade portfolio analytics with AI-powered risk detection and real-time market intelligence.
+      </p>
+    </div>
+
+    <div class="feature-pills">
+      <div class="pill"><span class="pill-dot green"></span>Parallel risk analysis</div>
+      <div class="pill"><span class="pill-dot cyan"></span>Linear regression forecasts</div>
+      <div class="pill"><span class="pill-dot purple"></span>Live CoinGecko data</div>
+      <div class="pill"><span class="pill-dot amber"></span>Smart rebalancing rules</div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-val">6</div>
+        <div class="stat-lbl">Tracked coins</div>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat-item">
+        <div class="stat-val">1K+</div>
+        <div class="stat-lbl">Mix iterations</div>
+      </div>
+      <div class="stat-div"></div>
+      <div class="stat-item">
+        <div class="stat-val">3</div>
+        <div class="stat-lbl">Stress scenarios</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel — form -->
+  <div class="login-right">
+    <div class="login-card" id="loginCard">
+
+      <!-- Login form -->
+      <div class="form-panel" id="formLogin">
+        <div class="form-header">
+          <h2>Welcome back</h2>
+          <p>Sign in to your account</p>
+        </div>
+
+        <div class="input-group">
+          <label>Username</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <input type="text" id="username" placeholder="Enter username" autocomplete="username">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="password" placeholder="Enter password" autocomplete="current-password">
+            <button class="eye-btn" id="eyeBtn" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="eyeIcon"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="check-label">
+            <input type="checkbox" id="rememberMe">
+            <span class="checkmark"></span>
+            Remember me
+          </label>
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <div class="error-box" id="errorBox"></div>
+
+        <button class="submit-btn" id="loginBtn" type="button">
+          <span class="btn-label">Sign In</span>
+          <div class="btn-spinner" id="btnSpinner"></div>
+          <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+
+        <div class="form-divider"><span>or</span></div>
+
+        <button class="secondary-btn" id="showRegBtn" type="button">
+          Create new account
+        </button>
+
+        <p class="demo-hint">Demo: <code>admin</code> / <code>admin123</code></p>
+      </div>
+
+      <!-- Register form (hidden) -->
+      <div class="form-panel" id="formRegister" style="display:none;">
+        <div class="form-header">
+          <h2>Create account</h2>
+          <p>Join CryptoManager today</p>
+        </div>
+
+        <div class="input-group">
+          <label>Username</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            <input type="text" id="regUser" placeholder="Choose a username">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Email</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+            <input type="email" id="regEmail" placeholder="your@email.com">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="regPass" placeholder="Create a strong password" oninput="checkStrength(this.value)">
+          </div>
+          <div class="strength-wrap">
+            <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+            <span class="strength-text" id="strengthText">Password strength</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Confirm password</label>
+          <div class="input-wrap">
+            <svg class="input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <input type="password" id="regPass2" placeholder="Confirm your password">
+          </div>
+        </div>
+
+        <label class="check-label terms-check">
+          <input type="checkbox" id="agreeTerms">
+          <span class="checkmark"></span>
+          I agree to the <a href="#">Terms</a> and <a href="#">Privacy Policy</a>
+        </label>
+
+        <div class="error-box" id="regErrorBox"></div>
+
+        <button class="submit-btn" id="registerBtn" type="button">
+          <span class="btn-label">Create Account</span>
+          <svg class="btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+
+        <button class="back-btn" id="backBtn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back to sign in
+        </button>
+      </div>
+
+    </div><!-- /login-card -->
+  </div><!-- /login-right -->
+</div><!-- /login-layout -->
+
+<!-- Success overlay -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-content">
+    <div class="success-ring">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="18" stroke="#06b6d4" stroke-width="2"/>
+        <path class="check-path" d="M12 20l6 6 10-12" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h3>Authentication Successful</h3>
+    <p>Initialising security protocols…</p>
+    <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoManager — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<meta name="description" content="CryptoManager — Real-time crypto portfolio management with ML-powered predictions, risk analysis, and smart allocation.">
+<meta name="theme-color" content="#050810">
+</head>
+<body class="dash-body" data-theme="{{ theme }}">
+
+<div class="dash-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="logo-icon sm">
+        <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+          <path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+          <circle cx="14" cy="14" r="3" fill="#06b6d4"/>
+        </svg>
+      </div>
+      <span class="sb-logo-text">CryptoManager</span>
+    </div>
+
+    <nav class="sb-nav">
+      <a class="sb-link active" data-section="overview" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Overview</span>
+      </a>
+      <a class="sb-link" data-section="portfolio" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span>Portfolio</span>
+      </a>
+      <a class="sb-link" data-section="analysis" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Analysis</span>
+      </a>
+      <a class="sb-link" data-section="rules" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Rules</span>
+        <span id="alertNavBadge" style="display:none;background:var(--red);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;margin-left:auto;align-items:center;justify-content:center;">0</span>
+      </a>
+      <a class="sb-link" data-section="watchlist" href="#">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>Watchlist</span>
+      </a>
+    </nav>
+
+    <div class="sb-bottom">
+      <div class="sb-user">
+        <div class="user-avatar">{{ avatar }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ username }}</div>
+          <div class="user-role">{{ role }}</div>
+        </div>
+      </div>
+      <a href="/logout" class="logout-btn" title="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main area ─────────────────────────────────────────────────────────── -->
+  <main class="dash-main">
+
+    <!-- Top bar -->
+    <header class="dash-header">
+      <div class="header-left">
+        <div class="breadcrumb" id="breadcrumb">Overview</div>
+        <div class="live-badge" id="liveBadge">
+          <span class="live-dot"></span>
+          <span id="liveLabel">Connecting…</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="refresh-ring" id="refreshRing" title="Auto-refresh in 60s">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="refreshIcon"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </div>
+        <button class="hdr-btn" id="exportBtn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+        <button class="hdr-btn icon-btn" id="themeToggle" title="Toggle dark/light mode">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <div class="last-updated" id="lastUpdated">—</div>
+      </div>
+    </header>
+
+    <!-- Ticker bar -->
+    <div class="dash-ticker" id="dashTicker">
+      {% for coin in watchlist %}
+      <div class="dt-coin" id="dt-{{ coin }}">
+        <span class="dt-sym">{{ coin[:3].upper() }}</span>
+        <span class="dt-price">—</span>
+        <span class="dt-chg">—</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ── SECTIONS ── -->
+
+    <!-- OVERVIEW -->
+    <section class="dash-section active" id="sec-overview">
+      <div class="sub-tabs" id="overviewTabs">
+        <button class="sub-tab active" data-subtab="dashboard">Dashboard</button>
+        <button class="sub-tab" data-subtab="news">News</button>
+      </div>
+
+      <div id="subtab-dashboard">
+
+      <div class="metrics-grid">
+        <div class="metric-card" id="mc-total">
+          <div class="mc-label">Total Portfolio</div>
+          <div class="mc-value" id="mv-total">—</div>
+          <div class="mc-delta" id="md-total">Loading…</div>
+        </div>
+        <div class="metric-card" id="mc-pnl">
+          <div class="mc-label">Unrealised P&L</div>
+          <div class="mc-value" id="mv-pnl">—</div>
+          <div class="mc-delta" id="md-pnl">vs avg buy</div>
+        </div>
+        <div class="metric-card" id="mc-best">
+          <div class="mc-label">Best Performer</div>
+          <div class="mc-value" id="mv-best">—</div>
+          <div class="mc-delta" id="md-best">24h change</div>
+        </div>
+        <div class="metric-card" id="mc-alerts">
+          <div class="mc-label">Active Alerts</div>
+          <div class="mc-value" id="mv-alerts">—</div>
+          <div class="mc-delta" id="md-alerts">±0.1% threshold</div>
+        </div>
+      </div>
+
+
+      <!-- Main row: Price History + Live Alerts -->
+      <div class="overview-grid">
+        <!-- Price chart -->
+        <div class="dash-card chart-full" id="chartCard">
+          <div class="card-head" style="flex-wrap:wrap;gap:8px;">
+            <div class="card-title">Price History</div>
+            <div class="coin-tabs" id="coinTabs">
+              {% for coin in watchlist %}
+              <button class="coin-tab{% if loop.first %} active{% endif %}" data-coin="{{ coin }}">{{ coin[:3].upper() }}</button>
+              {% endfor %}
+            </div>
+            <!-- Compare toggle -->
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+              <span>Compare:</span>
+              <select id="compareCoin" style="padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text1);font-size:12px;">
+                <option value="">None</option>
+                {% for coin in watchlist %}
+                <option value="{{ coin }}">{{ coin[:3].upper() }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="time-tabs" id="timeTabs" style="margin-left:auto;">
+              <!-- populated dynamically by JS -->
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:340px;">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Live Alerts panel -->
+        <div class="dash-card alerts-panel" id="alertsCard">
+          <div class="card-head">
+            <div class="card-title">Live Alerts</div>
+            <span class="alert-count-badge" id="alertCount">0</span>
+          </div>
+          <div class="alerts-list" id="alertsList" style="max-height:320px;overflow-y:auto;">
+            <div class="empty-state">No alerts triggered</div>
+          </div>
+        </div>
+      </div>
+      </div><!-- close subtab-dashboard -->
+
+      <div id="subtab-news" style="display:none;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="news-filter active" data-coin="">All coins</button>
+          {% for coin in watchlist %}
+          <button class="news-filter" data-coin="{{ coin }}">{{ coin[:3].upper() }}</button>
+          {% endfor %}
+        </div>
+        <div id="newsGrid" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="empty-state">Click "News" tab to load headlines.</div>
+        </div>
+      </div>
+
+    </section><!-- close sec-overview -->
+
+    <!-- PORTFOLIO -->
+    <section class="dash-section" id="sec-portfolio">
+      <div class="sub-tabs" id="portfolioTabs">
+        <button class="sub-tab active" data-subtab="positions">Positions</button>
+        <button class="sub-tab" data-subtab="tradelog">Trade Log</button>
+      </div>
+
+      <!-- POSITIONS sub-tab -->
+      <div id="subtab-positions">
+        <div class="section-head" style="margin-top:8px;">
+          <div>
+            <p class="section-sub">Track positions, unrealised P&L and allocation</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="ghost-btn" id="clearDemoBtn" title="Remove demo positions added by milestone4">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              Clear Demo Data
+            </button>
+            <button class="primary-btn" id="addPosBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Position
+            </button>
+          </div>
+        </div>
+
+      <!-- Summary cards -->
+      <div class="scroll-container" style="margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;min-width:600px;" id="portSummaryCards">
+        <div class="metric-card"><div class="mc-label">Total Value</div><div class="mc-value" id="ps-total">—</div></div>
+        <div class="metric-card"><div class="mc-label">Total Cost</div><div class="mc-value" id="ps-cost">—</div></div>
+        <div class="metric-card"><div class="mc-label">Unrealised P&L</div><div class="mc-value" id="ps-pnl">—</div></div>
+        <div class="metric-card"><div class="mc-label">P&L %</div><div class="mc-value" id="ps-pnlpct">—</div></div>
+        </div>
+      </div>
+
+      <!-- Add position form -->
+      <div class="add-form-card" id="addFormCard" style="display:none;">
+        <div style="font-size:13px;font-weight:500;color:var(--text1);margin-bottom:12px;">New Position</div>
+        <div class="form-row-4">
+          <div class="input-group sm">
+            <label>Coin</label>
+            <select id="posCoin">
+              {% for coin in watchlist %}
+              <option value="{{ coin }}">{{ coin }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="input-group sm">
+            <label>Symbol</label>
+            <input type="text" id="posSym" placeholder="BTC">
+          </div>
+          <div class="input-group sm">
+            <label>Amount held</label>
+            <input type="number" id="posAmt" placeholder="e.g. 0.05" step="0.000001">
+          </div>
+          <div class="input-group sm">
+            <label>Avg buy price (USD)</label>
+            <input type="number" id="posAvg" placeholder="e.g. 65000" step="0.01">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="primary-btn" id="savePosBtn">Save Position</button>
+          <button class="ghost-btn" id="cancelPosBtn">Cancel</button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table" id="portfolioTable">
+          <thead>
+            <tr>
+              <th>Coin</th>
+              <th>Amount</th>
+              <th>Avg Buy</th>
+              <th>Current</th>
+              <th>Value</th>
+              <th>Cost</th>
+              <th>P&L $</th>
+              <th>P&L %</th>
+              <th>Allocation</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="portfolioBody">
+            <tr><td colspan="11" class="table-empty">Loading portfolio…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="portfolio-total" id="portfolioTotal"></div>
+      </div><!-- close subtab-positions -->
+
+      <!-- TRADE LOG sub-tab -->
+      <div id="subtab-tradelog" style="display:none;">
+        <div class="dash-card" style="margin-bottom:16px;">
+          <div class="card-header"><div class="card-title">Log a Trade</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;padding:4px 0 8px;">
+            <div><label class="form-lbl">Coin</label>
+              <select id="tradeCoin" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;">
+                {% for coin in watchlist %}<option value="{{ coin }}">{{ coin }}</option>{% endfor %}
+              </select></div>
+            <div><label class="form-lbl">Side</label>
+              <select id="tradeSide" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;">
+                <option value="buy">Buy</option><option value="sell">Sell</option>
+              </select></div>
+            <div><label class="form-lbl">Amount</label>
+              <input id="tradeAmount" type="number" step="any" placeholder="0.00" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <div><label class="form-lbl">Price (USD)</label>
+              <input id="tradePrice" type="number" step="any" placeholder="0.00" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <div><label class="form-lbl">Fee (USD)</label>
+              <input id="tradeFee" type="number" step="any" placeholder="0.00" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <div><label class="form-lbl">Note</label>
+              <input id="tradeNote" type="text" placeholder="Optional note" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <button id="saveTradeBtn" class="action-btn" style="height:36px;padding:0 18px;white-space:nowrap;">+ Log Trade</button>
+          </div>
+        </div>
+        <div class="dash-card" style="margin-bottom:16px;">
+          <div class="card-header"><div class="card-title">Realised P&L (FIFO)</div></div>
+          <div id="pnlSummary"><div class="empty-state">Loading…</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="card-header"><div class="card-title">All Trades</div></div>
+          <div id="tradeLog"><div class="empty-state">No trades yet.</div></div>
+        </div>
+      </div><!-- close subtab-tradelog -->
+
+    </section><!-- close sec-portfolio -->
+
+    <!-- ANALYSIS (merged: Predictions + Risk + Mix + Backtest) -->
+    <section class="dash-section" id="sec-analysis">
+      <div class="sub-tabs" id="analysisTabs">
+        <button class="sub-tab active" data-subtab="predictions">Predictions</button>
+        <button class="sub-tab" data-subtab="risk">Risk</button>
+        <button class="sub-tab" data-subtab="mixes">Mix Calculator</button>
+        <button class="sub-tab" data-subtab="backtest">Backtesting</button>
+      </div>
+
+      <!-- Predictions -->
+      <div id="subtab-predictions">
+        <p class="section-sub" style="margin:8px 0 14px;">Linear regression + moving average signals</p>
+        <div class="scroll-container">
+          <div class="pred-grid" id="predGrid"><div class="empty-state">Loading predictions…</div></div>
+        </div>
+      </div>
+
+      <!-- Risk -->
+      <div id="subtab-risk" style="display:none;">
+        <p class="section-sub" style="margin:8px 0 14px;">Volatility, Sharpe ratio, max drawdown — parallel checks</p>
+        <div class="scroll-container">
+          <div class="risk-grid" id="riskGrid"><div class="empty-state">Loading risk data…</div></div>
+        </div>
+      </div>
+
+      <!-- Mixes -->
+      <div id="subtab-mixes" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 14px;">
+          <p class="section-sub">Optimal portfolio allocation from 1,000 random iterations</p>
+          <button class="primary-btn" id="runMixBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Re-run Calculator
+          </button>
+        </div>
+        <div class="scroll-container">
+          <div class="mixes-grid" id="mixesGrid"><div class="empty-state">Loading mixes…</div></div>
+        </div>
+      </div>
+
+      <!-- Backtesting -->
+      <div id="subtab-backtest" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 14px;">
+          <p class="section-sub">Simulate MA crossover signals on historical price data</p>
+          <button class="primary-btn" id="runBacktestBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run Backtest
+          </button>
+        </div>
+        <div class="dash-card" style="margin-bottom:16px;">
+          <div class="card-head"><div class="card-title">Parameters</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;padding:4px 0 8px;">
+            <div><label class="form-lbl">Coin</label>
+              <select id="btCoin" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;">
+                {% for coin in watchlist %}<option value="{{ coin }}">{{ coin }}</option>{% endfor %}
+              </select></div>
+            <div><label class="form-lbl">Short MA window</label>
+              <input id="btShortW" type="number" value="5" min="2" max="20" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <div><label class="form-lbl">Long MA window</label>
+              <input id="btLongW" type="number" value="15" min="5" max="60" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <div><label class="form-lbl">Starting capital (USD)</label>
+              <input id="btCapital" type="number" value="1000" min="100" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+          </div>
+        </div>
+        <div id="btSummary" style="display:none;margin-bottom:16px;">
+          <div class="scroll-container" style="margin-bottom:16px;">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;min-width:700px;">
+            <div class="metric-card"><div class="mc-label">Final Value</div><div class="mc-value" id="bt-final">—</div></div>
+            <div class="metric-card"><div class="mc-label">Total Return</div><div class="mc-value" id="bt-return">—</div></div>
+            <div class="metric-card"><div class="mc-label">Total Trades</div><div class="mc-value" id="bt-trades">—</div></div>
+            <div class="metric-card"><div class="mc-label">Win Rate</div><div class="mc-value" id="bt-winrate">—</div></div>
+            <div class="metric-card"><div class="mc-label">Max Drawdown</div><div class="mc-value" id="bt-maxdd">—</div></div>
+            </div>
+          </div>
+          <div class="dash-card"><div class="card-head"><div class="card-title">Equity Curve</div></div>
+            <div class="chart-wrap"><canvas id="btChart"></canvas></div>
+          </div>
+        </div>
+        <div class="dash-card" id="btTradeLog" style="display:none;">
+          <div class="card-head"><div class="card-title">Simulated Trades</div></div>
+          <div id="btTradeBody"></div>
+        </div>
+      </div>
+
+    </section><!-- close sec-analysis -->
+
+    <!-- RULES (merged: Rules + Price Alerts) -->
+    <section class="dash-section" id="sec-rules">
+      <div class="sub-tabs" id="rulesTabs">
+        <button class="sub-tab active" data-subtab="allocation">Allocation Rules</button>
+        <button class="sub-tab" data-subtab="price-alerts">Price Alerts</button>
+      </div>
+
+      <!-- Allocation Rules & Stress -->
+      <div id="subtab-allocation">
+        <p class="section-sub" style="margin:8px 0 14px;">Allocation enforcement and market scenario analysis</p>
+        <div class="rules-layout">
+          <div class="dash-card">
+            <div class="card-head"><div class="card-title">Allocation Rules</div></div>
+            <div id="rulesContent"><div class="empty-state">Loading…</div></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-head"><div class="card-title">Stress Scenarios</div></div>
+            <div id="stressContent"><div class="empty-state">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+
+    <!-- Price Alerts section -->
+      <!-- Price Alerts sub-tab -->
+      <div id="subtab-price-alerts" style="display:none;">
+        <p class="section-sub" style="margin:8px 0 14px;">Set custom alerts — get notified when any coin crosses your target price</p>
+        <div class="dash-card" style="margin-bottom:16px;">
+          <div class="card-header"><div class="card-title">Set Price Alert</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end;padding:4px 0 8px;">
+            <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Coin</label>
+              <select id="alertCoin" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;">
+                {% for coin in watchlist %}<option value="{{ coin }}">{{ coin }}</option>{% endfor %}
+              </select></div>
+            <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Condition</label>
+              <select id="alertCondition" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;">
+                <option value="above">▲ Price goes above</option>
+                <option value="below">▼ Price goes below</option>
+              </select></div>
+            <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Target Price (USD)</label>
+              <input id="alertTarget" type="number" step="any" placeholder="e.g. 75000" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;">Note (optional)</label>
+              <input id="alertNote" type="text" placeholder="e.g. Take profit" style="width:100%;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:13px;box-sizing:border-box;"></div>
+            <button id="saveAlertBtn" class="action-btn" style="height:36px;padding:0 18px;white-space:nowrap;">+ Add Alert</button>
+          </div>
+        </div>
+        <div class="dash-card" style="margin-bottom:16px;">
+          <div class="card-header"><div class="card-title">Active Alerts</div></div>
+          <div style="display:grid;grid-template-columns:1.5fr 1.5fr 2fr 1fr auto;gap:0;font-size:11px;color:var(--text2);padding:6px 12px;border-bottom:1px solid var(--border);">
+            <span>Coin</span><span>Trigger</span><span>Note</span><span>Created</span><span></span>
+          </div>
+          <div id="activeAlertsList"><div class="empty-state">Loading…</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="card-header"><div class="card-title">Triggered History</div></div>
+          <div style="display:grid;grid-template-columns:1.5fr 1.5fr 2fr 1fr auto;gap:0;font-size:11px;color:var(--text2);padding:6px 12px;border-bottom:1px solid var(--border);">
+            <span>Coin</span><span>Trigger</span><span>Note</span><span>Created</span><span>Status</span>
+          </div>
+          <div id="triggeredAlertsList"><div class="empty-state">No triggered alerts yet.</div></div>
+        </div>
+      </div>
+
+    </section><!-- close sec-rules -->
+
+    <!-- WATCHLIST -->
+    <section class="dash-section" id="sec-watchlist">
+      <div class="section-head">
+        <div>
+          <h2>Watchlist</h2>
+          <p class="section-sub">Search any coin on CoinGecko and add it to your personal watchlist</p>
+        </div>
+      </div>
+      <div class="dash-card" style="margin-bottom:16px;">
+        <div class="card-header"><div class="card-title">Search Coins</div></div>
+        <div style="padding:4px 0 12px;">
+          <input id="watchlistSearch" type="text" placeholder="Search by name or symbol, e.g. Solana or SOL…"
+            style="width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text0);font-size:14px;box-sizing:border-box;">
+          <div id="searchResults" style="margin-top:8px;"></div>
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="card-header"><div class="card-title">Your Watchlist</div></div>
+        <div id="watchlistCoins"><div class="empty-state">Loading…</div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Toast notifications -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+<script>const WATCHLIST = {{ watchlist | tojson }};</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
