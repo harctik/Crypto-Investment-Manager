@@ -167,7 +167,25 @@ def api_prices():
     coins = database.get_prices(wl)
     if coins:
         database.save_prices_batch(coins)
-    return jsonify(coins or [])
+        return jsonify(coins)
+    # Fallback: build price list from stored history when CoinGecko is unavailable
+    latest = database.get_latest_prices(wl)
+    tracked = database.list_tracked()
+    fallback = []
+    for t in tracked:
+        cid = t["coin_id"]
+        info = latest.get(cid, {})
+        fallback.append({
+            "id": cid,
+            "symbol": t["symbol"],
+            "name": t["name"],
+            "current_price": info.get("price_usd", 0),
+            "market_cap": 0,
+            "total_volume": 0,
+            "price_change_percentage_24h": info.get("change_24h", 0),
+            "image": f"https://assets.coingecko.com/coins/images/1/small/{cid}.png",
+        })
+    return jsonify(fallback)
 
 @app.route("/api/history/<coin_id>")
 @login_required
