@@ -249,41 +249,13 @@ function updateChartStats(values, color) {
 /* ── Time range definitions ─────────────────────────────────────────── */
 const TIME_RANGES = [
   { label: "ALL", mins: 0 },
-  { label: "1H",  mins: 60 },
-  { label: "6H",  mins: 360 },
-  { label: "12H", mins: 720 },
-  { label: "24H", mins: 1440 },
-  { label: "7D",  mins: 10080 },
-  { label: "30D", mins: 43200 },
-  { label: "90D", mins: 129600 },
 ];
 
 /* ── Dynamic time tab rendering ─────────────────────────────────────── */
 function renderTimeTabs(rows) {
   const container = document.getElementById("timeTabs");
   if (!container) return;
-  if (!rows.length) return;
-
-  const oldest = new Date(rows[0].fetched_at.replace(" ", "T") + "Z");
-  const newest = new Date(rows[rows.length - 1].fetched_at.replace(" ", "T") + "Z");
-  const dataSpanMins = (newest - oldest) / 60000;
-
-  container.innerHTML = "";
-  TIME_RANGES.forEach(tr => {
-    // Show ALL always; others only if data covers >= 50% of the range
-    if (tr.mins > 0 && dataSpanMins < tr.mins * 0.3) return;
-    const btn = document.createElement("button");
-    btn.className = "time-tab" + (tr.mins === _currentMins ? " active" : "");
-    btn.dataset.mins = tr.mins;
-    btn.textContent = tr.label;
-    btn.addEventListener("click", () => {
-      _compareRows = [];
-      const cmpSel = document.getElementById("compareCoin");
-      if (cmpSel) cmpSel.value = "";
-      loadChart(undefined, tr.mins);
-    });
-    container.appendChild(btn);
-  });
+  container.style.display = "none"; // Hide since only ALL is available
 }
 
 let _currentCoin  = "";

@@ -273,6 +273,7 @@ def init_db():
     print(f"  [DB] Ready  ->  {DB_FILE}")
     _seed_default_users()
     _seed_demo_portfolio(1)  # Ensure admin always has demo data
+    _seed_price_history()    # Fetch 30 days of price history for charts/predictions
 
 
 def _seed_default_users():
@@ -329,6 +330,55 @@ def _seed_demo_portfolio(user_id: int):
     for coin_id, note in NOTES:
         upsert_coin_note(user_id, coin_id, note)
     print(f"  [DB] Seeded demo portfolio for user_id={user_id}")
+
+
+def _seed_price_history():
+    """Fetch 30 days of historical prices from CoinGecko and seed into price_history.
+    Runs once on fresh databases so predictions/analysis work immediately."""
+    with conn() as c:
+        count = c.execute("SELECT COUNT(*) FROM price_history").fetchone()[0]
+        if count >= 100:
+            return  # Already has enough data
+
+    COINS = {
+        "bitcoin": ("btc", "Bitcoin"),
+        "ethereum": ("eth", "Ethereum"),
+        "solana": ("sol", "Solana"),
+        "binancecoin": ("bnb", "BNB"),
+        "cardano": ("ada", "Cardano"),
+        "ripple": ("xrp", "XRP"),
+        "chainlink": ("link", "Chainlink"),
+    }
+
+    print("  [DB] Seeding price history from CoinGecko (30 days)...")
+    import datetime
+    rows_added = 0
+
+    for coin_id, (symbol, name) in COINS.items():
+        try:
+            time.sleep(COINGECKO["min_gap_sec"])
+            data = _get(f"/coins/{coin_id}/market_chart", {"vs_currency": "usd", "days": "30"})
+            if not data or "prices" not in data:
+                continue
+
+            prices = data["prices"]  # [[timestamp_ms, price], ...]
+            batch = []
+            for ts_ms, price in prices:
+                dt = datetime.datetime.utcfromtimestamp(ts_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
+                batch.append((coin_id, symbol, name, price, 0, 0, 0, dt))
+
+            with conn() as c:
+                c.executemany("""
+                    INSERT INTO price_history
+                        (coin_id, symbol, name, price_usd, market_cap, volume_24h, change_24h, fetched_at)
+                    VALUES (?,?,?,?,?,?,?,?)
+                """, batch)
+            rows_added += len(batch)
+            print(f"    {coin_id}: {len(batch)} price points")
+        except Exception as e:
+            print(f"    {coin_id}: failed ({e})")
+
+    print(f"  [DB] Seeded {rows_added} total price history rows")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
