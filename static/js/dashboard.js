@@ -375,6 +375,24 @@ async function loadOverview() {
     animateNumber("mv-total", port.total || 0,
       v => "$" + v.toLocaleString("en", {maximumFractionDigits: 2}));
 
+    // Unrealised P&L on overview
+    const totalCost = (port.positions || []).reduce((s, p) => s + (p.amount * p.avg_buy), 0);
+    const totalPnl = (port.total || 0) - totalCost;
+    const pnlPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+    const pnlEl = document.getElementById("mv-pnl");
+    const pnlDEl = document.getElementById("md-pnl");
+    if (pnlEl) {
+      const sign = totalPnl >= 0 ? "+" : "";
+      pnlEl.textContent = `${sign}$${Math.abs(totalPnl).toLocaleString("en", {maximumFractionDigits: 2})}`;
+      pnlEl.style.color = totalPnl >= 0 ? "var(--green)" : "var(--red)";
+    }
+    if (pnlDEl) {
+      pnlDEl.textContent = `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%`;
+      pnlDEl.className = "mc-delta " + (pnlPct >= 0 ? "up" : "down");
+    }
+    document.getElementById("md-total").textContent =
+      `${(port.positions || []).length} positions`;
+
     if (coins.length) {
       const best = coins.reduce((a, b) =>
         (b.price_change_percentage_24h > a.price_change_percentage_24h) ? b : a);
