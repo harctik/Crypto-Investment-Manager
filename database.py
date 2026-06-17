@@ -272,6 +272,7 @@ def init_db():
         """)
     print(f"  [DB] Ready  ->  {DB_FILE}")
     _seed_default_users()
+    _seed_demo_portfolio(1)  # Ensure admin always has demo data
 
 
 def _seed_default_users():
@@ -288,6 +289,46 @@ def _seed_default_users():
                 c.execute(
                     "INSERT OR IGNORE INTO users (username,password_hash,salt,role,avatar) VALUES (?,?,?,?,?)",
                     (username, phash, salt, role, avatar))
+            # Seed demo portfolio for admin (user_id = 1)
+            _seed_demo_portfolio(1)
+
+
+def _seed_demo_portfolio(user_id: int):
+    """Seed realistic portfolio positions, trades, and notes for the given user."""
+    with conn() as c:
+        existing = c.execute("SELECT COUNT(*) FROM portfolio WHERE user_id=?", (user_id,)).fetchone()[0]
+        if existing > 0:
+            return  # Don't overwrite if already has data
+
+    POSITIONS = [
+        ("bitcoin",     "BTC",  0.05,    65000.00),
+        ("ethereum",    "ETH",  0.5,     3200.00),
+        ("solana",      "SOL",  5.0,     150.00),
+        ("binancecoin", "BNB",  1.0,     400.00),
+    ]
+    for coin_id, symbol, amount, avg_buy in POSITIONS:
+        upsert_position(coin_id, symbol, amount, avg_buy, user_id)
+
+    TRADES = [
+        ("bitcoin",     "BTC",  "buy",  0.03,  64000.00),
+        ("bitcoin",     "BTC",  "buy",  0.02,  66000.00),
+        ("ethereum",    "ETH",  "buy",  0.3,   3100.00),
+        ("ethereum",    "ETH",  "buy",  0.2,   3300.00),
+        ("solana",      "SOL",  "buy",  3.0,   145.00),
+        ("solana",      "SOL",  "buy",  2.0,   155.00),
+        ("binancecoin", "BNB",  "buy",  1.0,   400.00),
+    ]
+    for coin_id, symbol, side, amount, price in TRADES:
+        add_trade(user_id, coin_id, symbol, side, amount, price)
+
+    NOTES = [
+        ("bitcoin",  "DCA strategy — buying monthly. Post-halving momentum expected."),
+        ("ethereum", "Watching ETH/BTC ratio. L2 adoption accelerating."),
+        ("solana",   "High conviction. Network improvements + DeFi growth."),
+    ]
+    for coin_id, note in NOTES:
+        upsert_coin_note(user_id, coin_id, note)
+    print(f"  [DB] Seeded demo portfolio for user_id={user_id}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
