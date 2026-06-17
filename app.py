@@ -172,7 +172,7 @@ def api_prices():
 @app.route("/api/history/<coin_id>")
 @login_required
 def api_history(coin_id):
-    rows = database.get_history(coin_id, limit=10000)
+    rows = database.get_history(coin_id, limit=2000)
     rows.reverse()
     return jsonify(rows)
 

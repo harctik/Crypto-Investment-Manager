@@ -40,3 +40,5 @@ _seed_*.py
 
 # Screenshots (generated)
 CryptoManager_Screenshots.html
+
+.vercel

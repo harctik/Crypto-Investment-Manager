@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: cryptomanager
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python _seed_portfolio.py
+    startCommand: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: "false"
+    disk:
+      name: crypto-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
