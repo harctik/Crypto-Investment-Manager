@@ -6,7 +6,7 @@ Live Deployment: https://cryptomanagerapp.vercel.app
 
 ---
 
-## System Overview
+## Technical Overview
 
 Cryptocurrency assets display pronounced fat-tailed distributions, rapid volatility spikes, and sudden breakdowns in asset diversification during market stress. Standard consumer tracking tools merely display price histories without quantifying correlation dynamics or downside capital exposure.
 
@@ -19,12 +19,21 @@ QuantRisk models these dynamics mathematically:
 
 ---
 
-## Application Interface & Screenshots
+## Application Interface & Visual Analytics
 
 ### Web Analytics Dashboard
 The Flask web interface presents portfolio allocations, daily returns, correlation matrices, and risk metrics in real time, pulling live quotes and calculating portfolio health on demand.
 
 ![QuantRisk Web Dashboard](Flask_Dashboard.png)
+
+### Multi-Asset Volatility & Volume Comparison
+Market monitoring tracks 24-hour liquidity distribution and multi-day volatility trends across the tracked cryptocurrency universe.
+
+![24-Hour Volume Comparison](docs/plots/24h_volume_comparison.png)
+
+Time-series trajectory tracking records intraday high-frequency price shifts, identifying momentum reversals and volume divergence.
+
+![Solana 7-Day Price Trajectory](docs/plots/sol_7day_line.png)
 
 ### Modern Portfolio Theory and Covariance Matrix
 The mixing calculator aligns multi-asset historical returns, computes the empirical covariance matrix, and executes constrained optimization to establish the Efficient Frontier.
@@ -67,28 +76,21 @@ Unlike standard variance, Conditional VaR explicitly captures the expected magni
 
 ---
 
-## Repository Structure
+## Subsystem Specifications
 
-```text
-CryptoManager/
-├── app.py                       # Flask web service and dashboard routing
-├── config.py                    # CoinGecko endpoints, API settings, and asset parameters
-├── database.py                  # SQLite relational schema, caching, and API connectors
-├── main.py                      # Interactive terminal CLI execution menu
-├── milestone1_setup.py          # Workspace initialization and validation
-├── milestone2_mix_calculator.py  # Covariance matrix calculation, MPT, and SLSQP optimization
-├── milestone3_risk_predictor.py  # Monte Carlo simulation, VaR, CVaR, Sortino, and Calmar ratios
-├── milestone4_spreading_rules.py # Risk parity asset distribution and dynamic rebalancing rules
-├── milestone5_backtest.py       # Algorithmic trading simulation (SMA, RSI, Bollinger Bands)
-├── tests/                       # Automated pytest verification suite
-└── .github/workflows/           # GitHub Actions CI pipeline
-```
+| Milestone | Subsystem Module | Core Responsibilities | Mathematical / Engineering Output |
+|---|---|---|---|
+| Milestone 1 | Workspace & Ingestion | SQLite initialization, CoinGecko API polling, schema validation | Clean tabular price series and daily return logs |
+| Milestone 2 | Portfolio Mix Engine | Covariance matrix estimation, Markowitz Efficient Frontier | SLSQP optimal asset weight vectors maximizing Sharpe |
+| Milestone 3 | Downside Risk Modeler | Monte Carlo stress testing, Value at Risk, Conditional VaR | VaR 95/99, Expected Shortfall, Sortino, Calmar ratios |
+| Milestone 4 | Dynamic Rebalancing | Risk parity allocation heuristics, automated drift thresholds | Portfolio rebalancing orders, target weight alignment |
+| Milestone 5 | Backtesting Engine | Historical simulation for SMA crossover, RSI, Bollinger Bands | Cumulative return, maximum drawdown, win-loss ratio |
 
 ---
 
-## Quick Start
+## Local Development & Setup
 
-### 1. Clone & Environment Setup
+### 1. Repository Setup
 ```bash
 git clone https://github.com/harctik/Crypto-Investment-Manager.git
 cd Crypto-Investment-Manager
@@ -120,7 +122,7 @@ pytest tests/ -v
 
 ---
 
-## Author and Engineering Details
+## Author and Engineering Attribution
 
 All mathematical modeling, risk calculations, backtesting algorithms, and software implementation in this repository were engineered end-to-end by Avvari Naga Harthikanand (Harthik) as part of the Infosys Springboard 6.0 program.
 
