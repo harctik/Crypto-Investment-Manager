@@ -33,3 +33,4 @@ Thank you for your interest in contributing to Crypto Investment Manager!
 - Follow PEP 8 style guidelines.
 - Add descriptive commit messages adhering to Conventional Commits (e.g. `feat:`, `fix:`, `docs:`).
 - Document new quantitative models or API integrations in the README.
+

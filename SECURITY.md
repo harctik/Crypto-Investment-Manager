@@ -14,3 +14,4 @@ If you discover a security issue or vulnerability, please report it responsibly 
 **Email**: harthikanand90@gmail.com
 
 Please do not open public issues regarding undisclosed security vulnerabilities.
+

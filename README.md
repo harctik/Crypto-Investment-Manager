@@ -1,151 +1,166 @@
 <div align="center">
 
+<img src="banner.png" alt="QuantRisk Banner" width="100%" />
+
+<br/><br/>
+
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.0+-000000?style=for-the-badge&logo=flask&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 ![CoinGecko](https://img.shields.io/badge/CoinGecko_API-8DC63F?style=for-the-badge&logo=coingecko&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-10_Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
-# 📈 Crypto Investment Manager
+# QuantRisk: Autonomous Cryptocurrency Risk & Portfolio Optimization Engine
 
-**Quantitative cryptocurrency portfolio analytics, risk modeling, and backtesting platform built in Python & Flask.**
+A quantitative portfolio management and risk engineering system built in Python, featuring Markowitz Mean-Variance Optimization, Monte Carlo simulation across 1,000+ asset trajectories, Value at Risk (VaR / CVaR) downside modeling, and algorithmic trading backtesting.
 
-[Live Demo](https://cryptomanagerapp.vercel.app) • [Architecture](#-architecture) • [Features](#-core-features) • [Quantitative Models](#-quantitative-analytics) • [Quick Start](#-quick-start) • [Testing](#-testing)
+[Live Deployment](https://cryptomanagerapp.vercel.app) | [Architecture](#system-architecture) | [Quantitative Methodology](#quantitative-methodology) | [Repository Structure](#repository-structure) | [Quick Start](#quick-start) | [Test Suite](#test-suite) | [Attribution](#engineering-attribution)
 
 </div>
 
 ---
 
-## 🚀 Live Demo
+## Technical Overview
 
-The production web interface is deployed at: **[cryptomanagerapp.vercel.app](https://cryptomanagerapp.vercel.app)**
+Cryptocurrency markets present extreme volatility, non-Gaussian return distributions, and sudden correlation spikes during market selloffs. Off-the-shelf tracking dashboards treat all price shifts uniformly without accounting for tail-risk exposure or portfolio covariance.
+
+QuantRisk was engineered from scratch during the **Infosys Springboard 6.0** program to provide institutional-style quantitative analytics:
+1. **Mathematical Portfolio Optimization:** Computes empirical covariance matrices and executes Sequential Least Squares Programming (SLSQP) to establish the Markowitz Efficient Frontier.
+2. **Extreme Tail-Risk Modeling:** Replaces Gaussian assumptions with historical and parametric Value at Risk (VaR) and Conditional VaR (Expected Shortfall).
+3. **Stochastic Stress Testing:** Simulates 1,000+ stochastic price trajectories under simulated market shock conditions.
+4. **Automated Incident Alerting:** Dispatches real-time breach notifications via the Resend API when portfolio volatility exceeds predefined tolerance boundaries.
 
 ---
 
-## 🏛️ Architecture
+## System Architecture
 
-```mermaid
-flowchart TD
-    subgraph Data Layer
-        CG[CoinGecko API] --> |Live Quotes & History| DB[(SQLite Database)]
-        DB --> |Historical Price Series| M2[Milestone 2: Mix Calculator]
-        DB --> |Asset Returns| M3[Milestone 3: Risk Engine]
-    end
-
-    subgraph Analytics & Modeling
-        M2 --> |Modern Portfolio Theory| MVO[Markowitz Mean-Variance Optimization]
-        MVO --> |Optimal Weights| M4[Milestone 4: Rebalancing Rules]
-        M3 --> |Monte Carlo 1,000+ Iterations| VAR[Value at Risk / CVaR]
-        M3 --> |Factor Trends| REG[Linear Regression Forecasting]
-        DB --> |OHLC Series| M5[Milestone 5: Backtesting Engine]
-        M5 --> |Technical Signals| BT[SMA / RSI / MACD Strategies]
-    end
-
-    subgraph Presentation & Alerts
-        MVO & VAR & BT --> FLASK[Flask Web Application]
-        MVO & VAR & BT --> CLI[Interactive CLI Menu]
-        VAR --> |Threshold Violations| RESEND[Resend API Email Alerts]
-        FLASK --> UI[Web Dashboard]
-    end
+```
+[ CoinGecko Market API ]
+           |
+           v
+[ Data Ingestion Layer ] ---> [ SQLite Historical Persistence ]
+                                           |
+    +------------------+-------------------+------------------+
+    |                  |                                      |
+    v                  v                                      v
+[ Milestone 2 ]  [ Milestone 3 ]                        [ Milestone 5 ]
+Mean-Variance    Downside Tail Risk                     Algorithmic Strategy
+Optimization     Analytics                              Backtesting Engine
+    |                  |                                      |
+    +---> Covariance   +---> Monte Carlo 1,000+ paths         +---> SMA Crossover
+    +---> SLSQP Sharpe +---> Parametric & Historical VaR      +---> RSI Reversals
+    +---> Frontier     +---> Conditional VaR (CVaR)           +---> Bollinger Bands
+    |                  |                                      |
+    +------------------+-------------------+------------------+
+                                           |
+                                           v
+                       [ User Interfaces & Alerting ]
+                       +---> Flask Web Dashboard
+                       +---> Interactive CLI Menu
+                       +---> Resend API Volatility Alerts
 ```
 
 ---
 
-## ✨ Core Features
+## Quantitative Methodology
 
-| Module | Capability | Engineering Implementation |
-|---|---|---|
-| **Data Ingestion** | Live Crypto Feeds | Resilient CoinGecko API fetcher with rate limiting and local SQLite caching |
-| **Portfolio Optimizer** | Modern Portfolio Theory | Constrained SLSQP optimization maximizing Sharpe ratio and identifying the Efficient Frontier |
-| **Risk Analytics** | Tail-Risk Modeling | Parametric & Historical Value at Risk (VaR 95/99), Conditional VaR (Expected Shortfall) |
-| **Stress Testing** | Monte Carlo Engine | 1,000+ simulated market paths modeling extreme downside tail events |
-| **Strategy Backtester** | Algorithmic Backtesting | Historical evaluation of SMA Crossover, RSI Oversold/Overbought, and Bollinger Band regimes |
-| **Alerting System** | Anomaly & Breach Trigger | Automated email alerts dispatched via Resend API on volatility spikes |
+### 1. Modern Portfolio Theory (MPT) Formulation
+Given $n$ cryptocurrency assets with expected return vector $\boldsymbol{\mu}$ and covariance matrix $\boldsymbol{\Sigma}$:
 
----
+$$\mathbb{E}[R_p] = \mathbf{w}^T \boldsymbol{\mu}$$
 
-## 📐 Quantitative Analytics
+$$\sigma_p^2 = \mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}$$
 
-### 1. Modern Portfolio Theory (MPT)
-Portfolio expected return and variance are formulated as:
+The optimal portfolio allocation $\mathbf{w}^*$ maximizes the Sharpe ratio subject to capital allocation constraints:
 
-$$\mathbb{E}[R_p] = \mathbf{w}^T \boldsymbol{\mu}, \quad \sigma_p^2 = \mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}$$
+$$\max_{\mathbf{w}} \frac{\mathbf{w}^T \boldsymbol{\mu} - R_f}{\sqrt{\mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}}} \quad \text{subject to} \quad \sum_{i=1}^{n} w_i = 1, \quad w_i \ge w_{\min}$$
 
-Subject to full-investment and allocation constraints:
-
-$$\sum_{i=1}^n w_i = 1, \quad w_i \ge w_{\min}$$
-
-### 2. Tail Risk (VaR & CVaR)
-Downside risk is computed via historical simulation at confidence level $\alpha = 0.95$:
+### 2. Value at Risk (VaR) and Conditional VaR (CVaR)
+Downside loss expectations are modeled at the 95% and 99% confidence intervals:
 
 $$\text{VaR}_\alpha(L) = \inf \{ l \in \mathbb{R} : P(L > l) \le 1 - \alpha \}$$
 
 $$\text{CVaR}_\alpha(L) = \mathbb{E}[L \mid L \ge \text{VaR}_\alpha(L)]$$
 
+Unlike standard variance, CVaR accounts for the severity of catastrophic losses beyond the VaR threshold.
+
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 CryptoManager/
-├── app.py                      # Flask web application & dashboard endpoints
-├── config.py                   # Configuration, API endpoints & asset watchlist
-├── database.py                 # SQLite schema, queries & CoinGecko integration
-├── main.py                     # Interactive CLI execution entry point
-├── milestone1_setup.py         # Workspace environment initialization
-├── milestone2_mix_calculator.py # MPT, covariance matrix, efficient frontier
-├── milestone3_risk_predictor.py # Monte Carlo simulation, VaR, CVaR, linear regression
-├── milestone4_spreading_rules.py# Risk parity allocation & portfolio rebalancing
-├── milestone5_backtest.py      # Technical indicators (RSI, MACD) & strategy backtesting
-├── static/                     # CSS styling & client-side scripts
-├── templates/                  # Jinja2 templates (dashboard, login, reports)
-├── tests/                      # Automated unit test suite (pytest)
-└── .github/workflows/          # GitHub Actions CI pipeline
+├── app.py                       # Flask web service and dashboard routing
+├── config.py                    # CoinGecko endpoints, API settings, and asset parameters
+├── database.py                  # SQLite relational schema, caching, and API connectors
+├── main.py                      # Interactive terminal CLI execution menu
+├── milestone1_setup.py          # Workspace initialization and validation
+├── milestone2_mix_calculator.py  # Covariance matrix calculation, MPT, and SLSQP optimization
+├── milestone3_risk_predictor.py  # Monte Carlo simulation, VaR, CVaR, Sortino, and Calmar ratios
+├── milestone4_spreading_rules.py # Risk parity asset distribution and dynamic rebalancing rules
+├── milestone5_backtest.py       # Algorithmic trading simulation (SMA, RSI, Bollinger Bands)
+├── tests/                       # Automated pytest verification suite
+└── .github/workflows/           # GitHub Actions CI pipeline
 ```
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Clone & Setup
-
 ```bash
 git clone https://github.com/harctik/Crypto-Investment-Manager.git
 cd Crypto-Investment-Manager
 python -m venv venv
-# On Windows:
+
+# Activate:
+# Windows:
 venv\Scripts\activate
-# On Linux/macOS:
+# Linux/macOS:
 source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
 ### 2. Launch the Web Interface
-
 ```bash
 python app.py
 # Open: http://localhost:5000 (Default credentials: admin / admin123)
 ```
 
-### 3. Or Run the CLI Menu
-
+### 3. Run the CLI Engine
 ```bash
 python main.py
 ```
 
 ---
 
-## 🧪 Testing
+## Test Suite
 
-The repository includes automated unit tests covering mathematical calculations, optimization constraints, and backtesting:
+Automated unit tests in `tests/test_portfolio_math.py` verify mathematical precision across all milestones:
 
 ```bash
 pytest tests/ -v
 ```
 
+Verified test coverage includes:
+- Portfolio return and volatility formulas.
+- Random Dirichlet weight distributions summing strictly to 1.0.
+- Symmetric positive semi-definite covariance matrices.
+- SLSQP optimization under constraint bounds.
+- Parametric VaR vs. empirical CVaR relations ($\text{CVaR} \ge \text{VaR}$).
+- RSI oscillator bounds ($0 \le \text{RSI} \le 100$) and MACD signal convergence.
+
 ---
 
-## 📄 License
+## Engineering Attribution
 
-This project is licensed under the MIT License.
+All mathematical modeling, risk calculations, backtesting algorithms, and software implementation in this repository were engineered end-to-end by **Avvari Naga Harthikanand (Harthik)** as part of the Infosys Springboard 6.0 program.
+
+- **Developer:** Avvari Naga Harthikanand
+- **LinkedIn:** https://www.linkedin.com/in/harthik
+- **GitHub:** https://github.com/harctik
+- **Email:** harthikanand90@gmail.com
+- **Live Demo:** https://cryptomanagerapp.vercel.app
+- **License:** MIT License
