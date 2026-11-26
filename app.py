@@ -19,6 +19,7 @@ from flask_socketio import SocketIO, emit
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import database
+import demo_login
 import milestone2_mix_calculator as m2
 import milestone3_risk_predictor  as m3
 import milestone4_spreading_rules as m4
@@ -112,7 +113,9 @@ def do_login():
         data     = request.get_json() or {}
         username = data.get("username", "").strip()
         password = data.get("password", "")
-        user     = database.verify_user(username, password)
+        # Test sign-in (off by default, this computer only; see demo_login.py)
+        user     = (demo_login.demo_user(username, password, ip, request.headers)
+                    or database.verify_user(username, password))
         if user:
             # Reset rate limit on success
             _login_attempts.pop(ip, None)
