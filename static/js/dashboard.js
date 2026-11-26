@@ -7,6 +7,42 @@ window.onunhandledrejection = (e) => {
   console.error("Unhandled promise rejection:", e.reason);
 };
 
+/* Escape anything that came from a user or an outside API before it goes into innerHTML */
+const esc = v => String(v ?? "").replace(/[&<>"']/g,
+  ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const jsArg = v => esc(JSON.stringify(String(v ?? "")));
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "#";
+
+const SYMBOLS = {
+  bitcoin: "BTC", ethereum: "ETH", binancecoin: "BNB", solana: "SOL",
+  cardano: "ADA", ripple: "XRP", "matic-network": "MATIC", chainlink: "LINK",
+  dogecoin: "DOGE", "usd-coin": "USDC",
+};
+const symbolFor = id => SYMBOLS[id] || String(id).slice(0, 6).toUpperCase();
+
+const band = v => (+v).toLocaleString("en", { maximumFractionDigits: v >= 100 ? 0 : v >= 1 ? 2 : 4 });
+
+/* Chart colours come from the stylesheet so they follow the light and dark themes */
+function palette() {
+  const s = getComputedStyle(document.body);
+  const v = n => s.getPropertyValue(n).trim();
+  return {
+    accent: v("--cyan"), green: v("--green"), red: v("--red"), amber: v("--amber"),
+    text0: v("--text0"), text1: v("--text1"), text2: v("--text2"),
+    grid: v("--border"), surface: v("--bg2"),
+  };
+}
+const MONO = "IBM Plex Mono";
+/* Takes a #rrggbb colour and returns it with the given opacity */
+const fade = (hex, alpha) => hex + Math.round(alpha * 255).toString(16).padStart(2, "0");
+const tooltipStyle = c => ({
+  backgroundColor: c.surface, borderColor: c.grid, borderWidth: 1,
+  titleColor: c.text0, bodyColor: c.text1,
+  titleFont: { family: MONO, size: 12, weight: "600" },
+  bodyFont: { family: MONO, size: 12 },
+  padding: 10, cornerRadius: 4,
+});
+
 const savedTheme = localStorage.getItem("cm-theme") || document.body?.dataset.theme || "dark";
 if (document.body) document.body.dataset.theme = savedTheme;
 
@@ -21,8 +57,22 @@ function applyTheme(theme) {
   }).catch(() => {});
 }
 
+/* Charts read their colours when they are drawn, so redraw them after a theme change */
+function redrawCharts() {
+  if (priceChart) {
+    priceChart.destroy();
+    priceChart = null;
+    if (document.getElementById("compareCoin")?.value && _compareRows.length) loadCompareChart();
+    else loadChart(_currentCoin, _currentMins);
+  }
+  if (donutChartInst) loadDonut();
+  if (_lastFG) drawFGGauge(_lastFG.value, _lastFG.label);
+  if (btChartInst && _lastBacktest) drawBacktestChart(_lastBacktest);
+}
+
 document.getElementById("themeToggle")?.addEventListener("click", () => {
   applyTheme(document.body.dataset.theme === "dark" ? "light" : "dark");
+  redrawCharts();
 });
 
 let socket;
@@ -60,13 +110,6 @@ try {
 
 let priceChart = null;
 let _chartCoinId = "";
-const CHART_COLORS = {
-  bitcoin: "#f59e0b", ethereum: "#8b5cf6", solana: "#06b6d4",
-  binancecoin: "#f59e0b", cardano: "#10b981", ripple: "#3b82f6",
-  "matic-network": "#8b5cf6", chainlink: "#2563eb",
-  dogecoin: "#dba53a", harvestai: "#10b981", "usd-coin": "#2775ca",
-};
-
 /* ── Crosshair plugin ─────────────────────────────────────────────────── */
 const crosshairPlugin = {
   id: "crosshair",
@@ -78,7 +121,7 @@ const crosshairPlugin = {
       ctx.save();
       ctx.setLineDash([3, 3]);
       ctx.lineWidth = 1;
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      ctx.strokeStyle = fade(palette().text2, 0.6);
       // vertical line
       ctx.beginPath();
       ctx.moveTo(pt.x, area.top);
@@ -106,17 +149,14 @@ function formatChartLabel(dateStr, rangeMinutes) {
 }
 
 /* ── Chart options factory ──────────────────────────────────────────── */
-const _chartOptions = (color, rangeMinutes) => ({
+const _chartOptions = (c0) => ({
   responsive: true, maintainAspectRatio: false,
   plugins: {
     legend: { display: false },
     crosshair: {},
     tooltip: {
-      backgroundColor: "rgba(10,14,23,0.95)", borderColor: color + "66", borderWidth: 1,
-      titleColor: "#f9fafb", bodyColor: "#e5e7eb",
-      titleFont: { family: "DM Mono", size: 12, weight: "600" },
-      bodyFont:  { family: "DM Mono", size: 12 },
-      padding: 12, displayColors: false, cornerRadius: 8,
+      ...tooltipStyle(c0),
+      displayColors: false,
       callbacks: {
         title: (items) => {
           if (!items.length) return "";
@@ -140,18 +180,18 @@ const _chartOptions = (color, rangeMinutes) => ({
   },
   scales: {
     x: {
-      grid: { color: "rgba(255,255,255,0.03)", drawBorder: false },
+      grid: { color: c0.grid, drawBorder: false },
       ticks: {
-        color: "#6b7280", font: { family: "DM Mono", size: 10 },
+        color: c0.text2, font: { family: MONO, size: 10 },
         maxTicksLimit: 8, maxRotation: 0, autoSkip: true,
       },
       border: { display: false }
     },
     y: {
       position: "right",
-      grid: { color: "rgba(255,255,255,0.03)", drawBorder: false },
+      grid: { color: c0.grid, drawBorder: false },
       ticks: {
-        color: "#6b7280", font: { family: "DM Mono", size: 10 },
+        color: c0.text2, font: { family: MONO, size: 10 },
         callback: v => `$${v >= 1000 ? (v/1000).toFixed(1)+"k" : v.toFixed(v >= 100 ? 0 : v >= 1 ? 2 : 4)}`,
         maxTicksLimit: 6,
       },
@@ -167,15 +207,15 @@ const _chartOptions = (color, rangeMinutes) => ({
 function buildChart(labels, values, coinId, rangeMinutes) {
   const ctx = document.getElementById("priceChart");
   if (!ctx) return;
-  const color = CHART_COLORS[coinId] || "#06b6d4";
+  const colors = palette();
+  const color = colors.accent;
 
-  // Update stats bar
-  updateChartStats(values, color);
+  updateChartStats(values);
 
   if (priceChart && _chartCoinId === coinId) {
     priceChart.data.labels = labels;
     priceChart.data.datasets[0].data = values;
-    priceChart.options = _chartOptions(color, rangeMinutes);
+    priceChart.options = _chartOptions(colors);
     priceChart.update("none");
     return;
   }
@@ -191,25 +231,24 @@ function buildChart(labels, values, coinId, rangeMinutes) {
         borderColor: color, borderWidth: 2,
         pointRadius: values.length > 100 ? 0 : 1,
         pointHoverRadius: 5, pointHoverBackgroundColor: color,
-        pointHoverBorderColor: "#fff", pointHoverBorderWidth: 2,
+        pointHoverBorderColor: colors.surface, pointHoverBorderWidth: 2,
         fill: true,
         backgroundColor: (ctx2) => {
           const g = ctx2.chart.ctx.createLinearGradient(0, 0, 0, ctx2.chart.height);
-          g.addColorStop(0, color + "25");
-          g.addColorStop(0.5, color + "08");
-          g.addColorStop(1, color + "00");
+          g.addColorStop(0, fade(color, 0.12));
+          g.addColorStop(1, fade(color, 0));
           return g;
         },
-        tension: 0.35,
+        tension: 0.2,
       }]
     },
-    options: _chartOptions(color, rangeMinutes),
+    options: _chartOptions(colors),
     plugins: [crosshairPlugin]
   });
 }
 
 /* ── Chart stats bar ────────────────────────────────────────────────── */
-function updateChartStats(values, color) {
+function updateChartStats(values) {
   let bar = document.getElementById("chartStatsBar");
   if (!bar) {
     bar = document.createElement("div");
@@ -354,7 +393,7 @@ async function loadOverview() {
     const pnlEl = document.getElementById("mv-pnl");
     const pnlDEl = document.getElementById("md-pnl");
     if (pnlEl) {
-      const sign = totalPnl >= 0 ? "+" : "";
+      const sign = totalPnl >= 0 ? "+" : "-";
       pnlEl.textContent = `${sign}$${Math.abs(totalPnl).toLocaleString("en", {maximumFractionDigits: 2})}`;
       pnlEl.style.color = totalPnl >= 0 ? "var(--green)" : "var(--red)";
     }
@@ -368,7 +407,7 @@ async function loadOverview() {
     if (coins.length) {
       const best = coins.reduce((a, b) =>
         (b.price_change_percentage_24h > a.price_change_percentage_24h) ? b : a);
-      document.getElementById("mv-best").textContent = best.symbol;
+      document.getElementById("mv-best").textContent = SYMBOLS[best.id] || best.symbol;
       const bdEl = document.getElementById("md-best");
       bdEl.textContent =
         `${best.price_change_percentage_24h >= 0 ? "+" : ""}${best.price_change_percentage_24h.toFixed(2)}% today`;
@@ -397,13 +436,10 @@ function renderAlerts(alts) {
     const up  = a.direction && a.direction.includes("UP");
     const dir = up ? "up" : "down";
     const chg = a.change_24h != null ? `${a.change_24h >= 0 ? "+" : ""}${(+a.change_24h).toFixed(2)}%` : "";
-    // Extract coin name from message (e.g. "Bitcoin moved..." → "Bitcoin")
-    const coinName = (a.message || "").split(" ")[0];
-    const sym = coinName.substring(0, 3).toUpperCase();
     return `<div class="alert-item ${dir}">
       <div class="alert-dot ${dir}"></div>
       <div style="flex:1;min-width:0;">
-        <div class="alert-msg">${a.message}</div>
+        <div class="alert-msg">${esc(a.message)}</div>
         <div class="alert-time">
           <span>Just now</span>
           ${chg ? `<span class="alert-change" style="color:${up ? "var(--green)" : "var(--red)"}; margin-left:8px;">${chg}</span>` : ""}
@@ -442,7 +478,7 @@ async function loadPortfolio() {
     const setEl = (id, text, color) => { const e = document.getElementById(id); if(e){e.textContent=text; if(color) e.style.color=color;} };
     setEl("ps-total",  "$"+totalVal.toLocaleString("en",{maximumFractionDigits:2}));
     setEl("ps-cost",   "$"+totalCost.toLocaleString("en",{maximumFractionDigits:2}));
-    setEl("ps-pnl",    `${totalPnl>=0?"+":""}$${Math.abs(totalPnl).toLocaleString("en",{maximumFractionDigits:2})}`,
+    setEl("ps-pnl",    `${totalPnl>=0? "+" : "-"}$${Math.abs(totalPnl).toLocaleString("en",{maximumFractionDigits:2})}`,
           totalPnl >= 0 ? "var(--green)" : "var(--red)");
     setEl("ps-pnlpct", `${totalPct>=0?"+":""}${totalPct.toFixed(2)}%`,
           totalPct >= 0 ? "var(--green)" : "var(--red)");
@@ -454,15 +490,15 @@ async function loadPortfolio() {
       const pnlPct = p.pnl_pct || 0;
       return `<tr>
         <td class="name-cell">
-          <span style="font-weight:600;">${p.symbol}</span>
-          <span style="color:var(--text2);font-size:11px;display:block;">${p.coin_id}</span>
+          <span style="font-weight:600;">${esc(p.symbol)}</span>
+          <span style="color:var(--text2);font-size:11px;display:block;">${esc(p.coin_id)}</span>
         </td>
         <td style="font-family:var(--font-mono,monospace);font-size:12px;">${(+p.amount).toLocaleString("en",{maximumFractionDigits:8})}</td>
         <td>$${(+p.avg_buy).toLocaleString("en",{maximumFractionDigits:4})}</td>
         <td>$${(+p.price).toLocaleString("en",{maximumFractionDigits:4})}</td>
         <td style="font-weight:500;">$${(+(p.value||0)).toLocaleString("en",{maximumFractionDigits:2})}</td>
         <td style="color:var(--text2);">$${cost.toLocaleString("en",{maximumFractionDigits:2})}</td>
-        <td class="${pnl>=0?'up':'down'}" style="font-weight:500;">${pnl>=0?"+":""}$${Math.abs(pnl).toLocaleString("en",{maximumFractionDigits:2})}</td>
+        <td class="${pnl>=0?'up':'down'}" style="font-weight:500;">${pnl>=0? "+" : "-"}$${Math.abs(pnl).toLocaleString("en",{maximumFractionDigits:2})}</td>
         <td class="${pnlPct>=0?'up':'down'}">${pnlPct>=0?"+":""}${pnlPct.toFixed(2)}%</td>
         <td>
           <div style="display:flex;align-items:center;gap:6px;">
@@ -472,10 +508,10 @@ async function loadPortfolio() {
             <span style="font-size:11px;color:var(--text1);min-width:40px;">${(p.alloc_pct||0).toFixed(1)}%</span>
           </div>
         </td>
-        <td><input class="note-input" data-coin="${p.coin_id}" value="${note.replace(/"/g,'&quot;')}"
-          placeholder="Add note…" onblur="saveNote('${p.coin_id}', this.value)"></td>
+        <td><input class="note-input" data-coin="${esc(p.coin_id)}" value="${esc(note)}"
+          placeholder="Add note…" aria-label="Note for ${esc(p.symbol)}" onblur="saveNote(this.dataset.coin, this.value)"></td>
         <td>
-          <button class="pos-delete-btn" onclick="deletePosition('${p.coin_id}','${p.symbol}')" title="Remove position">
+          <button class="pos-delete-btn" onclick="deletePosition(${jsArg(p.coin_id)}, ${jsArg(p.symbol)})" title="Remove position" aria-label="Remove ${esc(p.symbol)}">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
             </svg>
@@ -488,11 +524,11 @@ async function loadPortfolio() {
       `Total Value: <strong style="color:var(--text0);">$${totalVal.toLocaleString("en",{maximumFractionDigits:2})}</strong>
        &nbsp;·&nbsp; Cost Basis: <strong style="color:var(--text2);">$${totalCost.toLocaleString("en",{maximumFractionDigits:2})}</strong>
        &nbsp;·&nbsp; P&L: <strong style="color:${totalPnl>=0?'var(--green)':'var(--red)'};">
-       ${totalPnl>=0?"+":""}$${Math.abs(totalPnl).toLocaleString("en",{maximumFractionDigits:2})}
+       ${totalPnl>=0? "+" : "-"}$${Math.abs(totalPnl).toLocaleString("en",{maximumFractionDigits:2})}
        (${totalPct>=0?"+":""}${totalPct.toFixed(2)}%)</strong>`;
 
   } catch(e) { console.error("loadPortfolio:", e); }
-  _portfolioLoading = false;
+  finally { _portfolioLoading = false; }
 }
 
 async function deletePosition(coinId, symbol) {
@@ -523,12 +559,12 @@ async function loadPredictions() {
       return;
     }
     grid.innerHTML = data.map(p => {
-      // Use .includes() — API returns "BUY  🟢", "SELL 🔴", "HOLD 🟡"
+      // The API decorates these strings, so match on the keyword
       const rawSig = (p.signal || "").toUpperCase();
       const sig = rawSig.includes("BUY") ? "buy" : rawSig.includes("SELL") ? "sell" : "hold";
       const rawTrn = (p.trend || "").toUpperCase();
       const trn = rawTrn.includes("BULL") ? "bullish" : rawTrn.includes("BEAR") ? "bearish" : "neutral";
-      const sigLabel = sig === "buy" ? "BUY 🟢" : sig === "sell" ? "SELL 🔴" : "HOLD 🟡";
+      const sigLabel = sig.toUpperCase();
 
       const fcast = (p.linreg_forecast || []).slice(0, 3)
         .map(v => `$${(+v).toLocaleString("en", {maximumFractionDigits: 2})}`).join(" → ");
@@ -537,24 +573,23 @@ async function loadPredictions() {
       const rsi = p.rsi;
       let rsiClass = "neutral", rsiLabel = "—";
       if (rsi != null) {
-        if (rsi < 30)      { rsiClass = "buy";  rsiLabel = `${rsi.toFixed(1)} (Oversold 🟢)`; }
-        else if (rsi > 70) { rsiClass = "sell"; rsiLabel = `${rsi.toFixed(1)} (Overbought 🔴)`; }
+        if (rsi < 30)      { rsiClass = "buy";  rsiLabel = `${rsi.toFixed(1)} (Oversold)`; }
+        else if (rsi > 70) { rsiClass = "sell"; rsiLabel = `${rsi.toFixed(1)} (Overbought)`; }
         else               { rsiClass = "hold"; rsiLabel = `${rsi.toFixed(1)} (Neutral)`; }
       }
 
-      // Trend display with proper icon
-      const trendIcon = trn === "bullish" ? "BULLISH ↑" : trn === "bearish" ? "BEARISH ↓" : "NEUTRAL ➡";
+      const trendLabel = trn.charAt(0).toUpperCase() + trn.slice(1) + " trend";
 
       // ML method badge
       const method = p.method || "LinReg";
-      const methodBadge = method.includes("Ridge") 
-        ? '<span style="background:var(--purple-bg,#7c3aed22);color:var(--purple,#a78bfa);padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;">ML Ridge</span>'
-        : '<span style="background:var(--bg3);color:var(--text2);padding:2px 8px;border-radius:6px;font-size:10px;">LinReg</span>';
+      const methodBadge = method.includes("Ridge")
+        ? '<span class="model-badge ml">ML Ridge</span>'
+        : '<span class="model-badge">LinReg</span>';
 
       return `<div class="pred-card ${sig}">
         <div class="pred-header">
           <div>
-            <div class="pred-coin">${p.coin_id}</div>
+            <div class="pred-coin">${esc(p.coin_id)}</div>
             <div class="pred-price">$${(+p.current_price).toLocaleString("en", {maximumFractionDigits: 4})}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
@@ -564,7 +599,7 @@ async function loadPredictions() {
         </div>
 
         ${p.ml_prediction ? `<div class="pred-row" style="background:var(--purple-bg,rgba(124,58,237,0.08));border-radius:8px;padding:6px 10px;margin:6px 0;">
-          <span style="font-weight:600;">${tip("ML Prediction", "scikit-learn Ridge regression with 14 features: returns, volatility, RSI, MACD, Bollinger bands, momentum. More accurate than simple LinReg.")}</span>
+          <span style="font-weight:600;">${tip("ML Prediction", "scikit-learn Ridge regression with 14 features: returns, volatility, RSI, MACD, Bollinger bands, momentum.")}</span>
           <span style="font-weight:700;color:var(--text0);">$${(+p.ml_prediction).toLocaleString("en", {maximumFractionDigits: 4})}</span>
         </div>` : ""}
 
@@ -582,13 +617,13 @@ async function loadPredictions() {
           <span style="color:${(p.macd_histogram||0) >= 0 ? 'var(--green)' : 'var(--red)'};">${(+p.macd).toFixed(4)} (hist: ${((p.macd_histogram||0) >= 0 ? "+" : "") + (+p.macd_histogram||0).toFixed(4)})</span></div>` : ""}
 
         ${p.bb_upper != null && p.bb_lower != null ? `<div class="pred-row"><span>${tip("Bollinger", "Bollinger Bands — price near lower band = potential buy, near upper band = potential sell. Width shows volatility.")}</span>
-          <span style="font-size:11px;">$${(+p.bb_lower).toLocaleString("en",{maximumFractionDigits:0})} — $${(+p.bb_upper).toLocaleString("en",{maximumFractionDigits:0})}</span></div>` : ""}
+          <span style="font-size:11px;">$${band(p.bb_lower)} — $${band(p.bb_upper)}</span></div>` : ""}
 
         <div class="pred-row"><span>${tip("Slope/snap", "How fast the LinReg line is rising or falling per snapshot.")}</span>
           <span>${(p.slope_pct_per_snap||0) >= 0 ? "+" : ""}${(p.slope_pct_per_snap||0).toFixed(4)}%</span></div>
-        ${fcast ? `<div class="pred-row"><span>${tip("Forecast", "LinReg price projections for the next 5 snapshots.")}</span>
+        ${fcast ? `<div class="pred-row"><span>${tip("Forecast", "LinReg price projections for the next 3 snapshots.")}</span>
           <span style="font-size:10px;">${fcast}</span></div>` : ""}
-        <div class="pred-trend ${trn}" style="margin-top:10px;">${trendIcon}</div>
+        <div class="pred-trend ${trn}">${trendLabel}</div>
       </div>`;
     }).join("");
   } catch (e) { console.error("loadPredictions:", e); }
@@ -622,7 +657,7 @@ async function loadRisk() {
 
       return `<div class="risk-card">
         <div class="risk-header">
-          <div class="risk-coin">${r.coin_id}</div>
+          <div class="risk-coin">${esc(r.coin_id)}</div>
           <span class="tier-badge ${tier}">${r.risk_tier}</span>
         </div>
         <div class="risk-bar-wrap">
@@ -657,7 +692,7 @@ async function loadRisk() {
           <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600;">Advanced Risk Metrics</div>
           <div class="risk-stats">
             ${varPct != null ? `<div class="risk-stat">
-              <div class="risk-stat-lbl">${tip("VaR 95%", "Value-at-Risk \u2014 95% chance daily loss won't exceed this percentage. Based on historical returns.")}</div>
+              <div class="risk-stat-lbl">${tip("VaR 95%", "Value-at-Risk \u2014 In 95% of past snapshot-to-snapshot moves, the loss was no larger than this. Based on stored price history.")}</div>
               <div class="risk-stat-val" style="color:var(--red);">${varPct.toFixed(2)}%</div>
             </div>` : ""}
             ${cvarPct != null ? `<div class="risk-stat">
@@ -683,38 +718,38 @@ async function loadMixes() {
   try {
     const data = await (await fetch("/api/mixes")).json();
     const grid = document.getElementById("mixesGrid");
-    if (!data.length) {
-      grid.innerHTML = '<div class="empty-state">No mixes yet. Click Re-run Calculator.</div>';
+    const MIXES = [
+      ["best_sharpe", "Best Sharpe ratio", "sharpe"],
+      ["best_return", "Best expected return", "return"],
+      ["lowest_risk", "Lowest risk", "risk"],
+    ].filter(([key]) => data[key]);
+    if (!MIXES.length) {
+      grid.innerHTML = '<div class="empty-state">Not enough price history to calculate mixes yet.</div>';
       return;
     }
-    const classes = ["sharpe", "return", "risk"];
-    grid.innerHTML = data.map((mx, i) => {
-      const coins   = mx.coin_ids.split(",");
-      const weights = mx.weights.split(",").map(Number);
-      const bars    = coins.map((c, j) => `
+    grid.innerHTML = MIXES.map(([key, label, cls]) => {
+      const mx   = data[key];
+      const bars = mx.coins.map((c, j) => `
         <div class="mix-alloc-row">
-          <div class="mix-coin-name">${c}</div>
+          <div class="mix-coin-name">${esc(c)}</div>
           <div class="mix-bar">
-            <div class="mix-fill" style="width:${(weights[j]*100).toFixed(1)}%"></div>
+            <div class="mix-fill" style="width:${(mx.weights[j]*100).toFixed(1)}%"></div>
           </div>
-          <div class="mix-pct">${(weights[j]*100).toFixed(1)}%</div>
+          <div class="mix-pct">${(mx.weights[j]*100).toFixed(1)}%</div>
         </div>`).join("");
-      return `<div class="mix-card ${classes[i] || "sharpe"}">
-        <div class="mix-label">${mx.label}</div>
+      return `<div class="mix-card ${cls}">
+        <div class="mix-label">${label}</div>
         <div class="mix-stats">
           <div>
-            <div class="mix-stat-val">${(+mx.exp_return) >= 0 ? "+" : ""}${(+mx.exp_return).toFixed(4)}%</div>
+            <div class="mix-stat-val">${(+mx.exp_ret) >= 0 ? "+" : ""}${(+mx.exp_ret).toFixed(4)}%</div>
             <div class="mix-stat-lbl">${tip("Return", "Expected average return per snapshot based on historical data. Negative means the portfolio would have lost value on average.")}</div>
           </div>
           <div>
             <div class="mix-stat-val">${(+mx.exp_risk).toFixed(4)}%</div>
-            <div class="mix-stat-lbl">${tip("Risk", "Portfolio volatility — how much the combined value swings. Lower risk = more stable but usually lower return.")}</div>
+            <div class="mix-stat-lbl">${tip("Risk", "Portfolio volatility: how much the combined value swings. Lower risk is more stable but usually means lower return.")}</div>
           </div>
         </div>
         ${bars}
-        <div style="font-size:11px;color:var(--text2);margin-top:10px;">
-          ${new Date(mx.created_at).toLocaleString()}
-        </div>
       </div>`;
     }).join("");
   } catch (e) { console.error("loadMixes:", e); }
@@ -742,9 +777,9 @@ async function loadRules() {
         const driftOk = drift < 10;
         if (!driftOk) violations++;
         const driftColor = driftOk ? "var(--green)" : "var(--red)";
-        const arrow = cur > tgt ? "↓ reduce" : cur < tgt ? "↑ increase" : "✓ ok";
+        const arrow = cur > tgt ? "↓ reduce" : cur < tgt ? "↑ increase" : "ok";
         rulesHtml += `<div class="rule-row">
-          <span class="rule-key">${cid}</span>
+          <span class="rule-key">${esc(cid)}</span>
           <span class="rule-val" style="display:flex;gap:8px;align-items:center;">
             <span style="color:var(--text2);">${cur.toFixed(1)}%</span>
             <span style="color:var(--text2);">→</span>
@@ -764,7 +799,7 @@ async function loadRules() {
       violations += corrData.warnings.length;
       corrData.warnings.forEach(w => {
         rulesHtml += `<div class="rule-row" style="border-left:3px solid var(--amber);padding-left:8px;">
-          <span class="rule-key" style="color:var(--amber);font-size:11px;">${w}</span>
+          <span class="rule-key" style="color:var(--amber);font-size:11px;">${esc(w)}</span>
         </div>`;
       });
     }
@@ -806,7 +841,7 @@ async function loadRules() {
           </div>
           <div style="text-align:right;">
             <div class="stress-pnl ${s.pnl >= 0 ? "pos" : "neg"}">
-              ${s.pnl >= 0 ? "+" : ""}$${Math.abs(s.pnl).toLocaleString("en", {maximumFractionDigits: 0})}
+              ${s.pnl >= 0 ? "+" : "-"}$${Math.abs(s.pnl).toLocaleString("en", {maximumFractionDigits: 0})}
             </div>
             <div style="font-size:11px;color:var(--text2);font-family:var(--font-mono);margin-top:2px;">
               → $${(s.new_val||0).toLocaleString("en", {maximumFractionDigits: 0})}
@@ -830,16 +865,16 @@ async function loadPriceAlerts() {
         : active.map(a => `
           <div class="alert-row" id="alert-row-${a.id}">
             <div class="alert-row-coin">
-              <span class="alert-symbol">${a.symbol}</span>
-              <span class="alert-coin-id">${a.coin_id}</span>
+              <span class="alert-symbol">${esc(SYMBOLS[a.coin_id] || a.symbol)}</span>
+              <span class="alert-coin-id">${esc(a.coin_id)}</span>
             </div>
             <div class="alert-row-condition">
-              <span class="alert-badge ${a.condition}">${a.condition === "above" ? "▲ Above" : "▼ Below"}</span>
+              <span class="alert-badge ${esc(a.condition)}">${a.condition === "above" ? "Above" : "Below"}</span>
               <span class="alert-target">$${(+a.target).toLocaleString("en", {maximumFractionDigits: 6})}</span>
             </div>
-            <div class="alert-row-note">${a.note || "—"}</div>
+            <div class="alert-row-note">${esc(a.note || "—")}</div>
             <div class="alert-row-date">${new Date(a.created_at).toLocaleDateString()}</div>
-            <button class="alert-delete-btn" onclick="deleteAlert(${a.id})">
+            <button class="alert-delete-btn" onclick="deleteAlert(${Number(a.id)})" aria-label="Delete alert">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
                 <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
@@ -854,14 +889,14 @@ async function loadPriceAlerts() {
         : triggered.map(a => `
           <div class="alert-row triggered">
             <div class="alert-row-coin">
-              <span class="alert-symbol">${a.symbol}</span>
-              <span class="alert-coin-id">${a.coin_id}</span>
+              <span class="alert-symbol">${esc(SYMBOLS[a.coin_id] || a.symbol)}</span>
+              <span class="alert-coin-id">${esc(a.coin_id)}</span>
             </div>
             <div class="alert-row-condition">
-              <span class="alert-badge ${a.condition}">${a.condition === "above" ? "▲ Above" : "▼ Below"}</span>
+              <span class="alert-badge ${esc(a.condition)}">${a.condition === "above" ? "Above" : "Below"}</span>
               <span class="alert-target">$${(+a.target).toLocaleString("en", {maximumFractionDigits: 6})}</span>
             </div>
-            <div class="alert-row-note">${a.note || "—"}</div>
+            <div class="alert-row-note">${esc(a.note || "—")}</div>
             <div class="alert-row-date">${new Date(a.created_at).toLocaleDateString()}</div>
             <span class="alert-fired-badge">Fired</span>
           </div>`).join("");
@@ -900,7 +935,7 @@ async function loadTrades() {
             <div class="pnl-summary-card">
               <div class="pnl-label">Total realised P&L</div>
               <div class="pnl-value ${totalRealised >= 0 ? 'up' : 'down'}">
-                ${totalRealised >= 0 ? "+" : ""}$${Math.abs(totalRealised).toLocaleString("en",{maximumFractionDigits:2})}
+                ${totalRealised >= 0 ? "+" : "-"}$${Math.abs(totalRealised).toLocaleString("en",{maximumFractionDigits:2})}
               </div>
             </div>
           </div>
@@ -910,11 +945,11 @@ async function loadTrades() {
             </tr></thead>
             <tbody>
               ${pnl.map(p => `<tr>
-                <td><strong>${p.symbol}</strong> <span style="color:var(--text2);font-size:11px;">${p.coin_id}</span></td>
+                <td><strong>${esc(p.symbol)}</strong> <span style="color:var(--text2);font-size:11px;">${esc(p.coin_id)}</span></td>
                 <td>$${p.total_bought.toLocaleString("en",{maximumFractionDigits:2})}</td>
                 <td>$${p.total_sold.toLocaleString("en",{maximumFractionDigits:2})}</td>
                 <td class="${p.realised_pnl >= 0 ? 'up' : 'down'}">
-                  ${p.realised_pnl >= 0 ? "+" : ""}$${Math.abs(p.realised_pnl).toLocaleString("en",{maximumFractionDigits:4})}
+                  ${p.realised_pnl >= 0 ? "+" : "-"}$${Math.abs(p.realised_pnl).toLocaleString("en",{maximumFractionDigits:4})}
                 </td>
               </tr>`).join("")}
             </tbody>
@@ -935,13 +970,13 @@ async function loadTrades() {
             <tbody>
               ${trades.map(t => `<tr>
                 <td style="font-size:11px;font-family:var(--font-mono);">${new Date(t.traded_at).toLocaleString()}</td>
-                <td><strong>${t.symbol}</strong></td>
-                <td><span class="trade-side ${t.side}">${t.side.toUpperCase()}</span></td>
+                <td><strong>${esc(t.symbol)}</strong></td>
+                <td><span class="trade-side ${esc(t.side)}">${esc(t.side).toUpperCase()}</span></td>
                 <td>${(+t.amount).toLocaleString("en",{maximumFractionDigits:6})}</td>
                 <td>$${(+t.price).toLocaleString("en",{maximumFractionDigits:4})}</td>
                 <td>$${((+t.amount)*(+t.price)).toLocaleString("en",{maximumFractionDigits:2})}</td>
                 <td>$${(+t.fee).toFixed(2)}</td>
-                <td style="color:var(--text2);font-size:12px;">${t.note||"—"}</td>
+                <td style="color:var(--text2);font-size:12px;">${esc(t.note || "—")}</td>
               </tr>`).join("")}
             </tbody>
           </table>`;
@@ -960,12 +995,12 @@ async function loadWatchlist() {
       return;
     }
     el.innerHTML = data.map(c => `
-      <div class="watchlist-row" id="wl-${c.coin_id}">
+      <div class="watchlist-row" id="wl-${esc(c.coin_id)}">
         <div>
-          <span class="wl-symbol">${c.symbol}</span>
-          <span class="wl-name">${c.name || c.coin_id}</span>
+          <span class="wl-symbol">${esc(c.symbol)}</span>
+          <span class="wl-name">${esc(c.name || c.coin_id)}</span>
         </div>
-        <button class="alert-delete-btn" onclick="removeFromWatchlist('${c.coin_id}')">
+        <button class="alert-delete-btn" onclick="removeFromWatchlist(${jsArg(c.coin_id)})" aria-label="Remove ${esc(c.symbol)}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
           </svg>
@@ -989,10 +1024,10 @@ document.getElementById("watchlistSearch")?.addEventListener("input", function()
         return;
       }
       resultsEl.innerHTML = results.map(c => `
-        <div class="search-result-row" onclick="addToWatchlist('${c.id}','${c.symbol}','${(c.name||"").replace(/'/g,"\\'")}')">
-          <span class="wl-symbol">${c.symbol}</span>
-          <span class="wl-name">${c.name}</span>
-          ${c.rank ? `<span style="font-size:11px;color:var(--text2);margin-left:auto;">#${c.rank}</span>` : ""}
+        <div class="search-result-row" onclick="addToWatchlist(${jsArg(c.id)}, ${jsArg(c.symbol)}, ${jsArg(c.name)})">
+          <span class="wl-symbol">${esc(c.symbol)}</span>
+          <span class="wl-name">${esc(c.name)}</span>
+          ${c.rank ? `<span style="font-size:11px;color:var(--text2);margin-left:auto;">#${Number(c.rank)}</span>` : ""}
         </div>`).join("");
     } catch(_) {}
   }, 400);
@@ -1037,7 +1072,11 @@ async function loadFearGreed() {
   }
 }
 
+let _lastFG = null;
+
 function drawFGGauge(value, label) {
+  _lastFG = { value, label };
+  const c0 = palette();
   const canvas = document.getElementById("fgGauge");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
@@ -1050,25 +1089,24 @@ function drawFGGauge(value, label) {
   const toRad = deg => (deg - 180) * Math.PI / 180;
 
   const segs = [
-    { from: 0,  to: 25,  color: "#ef4444" },
-    { from: 25, to: 45,  color: "#f97316" },
-    { from: 45, to: 55,  color: "#eab308" },
-    { from: 55, to: 75,  color: "#84cc16" },
-    { from: 75, to: 100, color: "#22c55e" },
+    { from: 0,  to: 25,  color: c0.red },
+    { from: 25, to: 45,  color: c0.amber },
+    { from: 45, to: 55,  color: c0.text2 },
+    { from: 55, to: 75,  color: c0.green },
+    { from: 75, to: 100, color: c0.green },
   ];
   segs.forEach(s => {
     ctx.beginPath();
     ctx.arc(cx, cy, r, toRad(s.from * 1.8), toRad(s.to * 1.8));
     ctx.lineWidth = lw;
-    ctx.strokeStyle = s.color + "55";
+    ctx.strokeStyle = fade(s.color, 0.3);
     ctx.stroke();
   });
 
   ctx.beginPath();
   ctx.arc(cx, cy, r, toRad(0), toRad(value * 1.8));
   ctx.lineWidth = lw;
-  const activeColor = value >= 75 ? "#22c55e" : value >= 55 ? "#84cc16"
-                    : value >= 45 ? "#eab308" : value >= 25 ? "#f97316" : "#ef4444";
+  const activeColor = segs.find(s => value <= s.to)?.color || c0.green;
   ctx.strokeStyle = activeColor;
   ctx.stroke();
 
@@ -1077,25 +1115,26 @@ function drawFGGauge(value, label) {
   ctx.moveTo(cx, cy);
   ctx.lineTo(cx + (r - lw - 2) * Math.cos(needleAngle), cy + (r - lw - 2) * Math.sin(needleAngle));
   ctx.lineWidth = 2;
-  ctx.strokeStyle = "#fff";
+  ctx.strokeStyle = c0.text0;
   ctx.lineCap = "round";
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = c0.text0;
   ctx.fill();
 
-  ctx.font = `bold ${Math.max(16, r * 0.35)}px monospace`;
+  ctx.font = `600 ${Math.max(16, r * 0.35)}px "${MONO}", monospace`;
   ctx.fillStyle = activeColor;
   ctx.textAlign = "center";
   ctx.fillText(value, cx, cy - Math.max(16, r * 0.3));
 }
 
 let donutChartInst = null;
-const DONUT_COLORS = [
-  "#06b6d4","#8b5cf6","#f59e0b","#10b981","#f43f5e",
-  "#3b82f6","#ec4899","#14b8a6","#f97316","#6366f1"
+/* Shades of the accent and the text colour, strongest first */
+const donutShades = c => [
+  c.accent, c.text0, fade(c.accent, 0.65), c.text2, fade(c.accent, 0.4),
+  fade(c.text0, 0.65), c.amber, fade(c.accent, 0.22), c.green, fade(c.text2, 0.45),
 ];
 
 async function loadDonut() {
@@ -1106,7 +1145,9 @@ async function loadDonut() {
 
     const labels  = positions.map(p => p.symbol || p.coin_id);
     const values  = positions.map(p => p.alloc_pct || 0);
-    const colors  = positions.map((_, i) => DONUT_COLORS[i % DONUT_COLORS.length]);
+    const c0      = palette();
+    const shades  = donutShades(c0);
+    const colors  = positions.map((_, i) => shades[i % shades.length]);
 
     const ctx = document.getElementById("donutChart")?.getContext("2d");
     if (!ctx) return;
@@ -1114,7 +1155,7 @@ async function loadDonut() {
 
     donutChartInst = new Chart(ctx, {
       type: "doughnut",
-      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
+      data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: c0.surface, borderWidth: 2, hoverOffset: 4 }] },
       options: {
         responsive: true,
         cutout: "72%",
@@ -1122,7 +1163,7 @@ async function loadDonut() {
           legend: { display: false },
           tooltip: {
             callbacks: { label: c => ` ${c.label}: ${c.parsed.toFixed(1)}%` },
-            backgroundColor: "#111827", titleColor: "#f9fafb", bodyColor: "#9ca3af",
+            ...tooltipStyle(c0),
           }
         },
         animation: { duration: 600 }
@@ -1134,7 +1175,7 @@ async function loadDonut() {
       legend.innerHTML = positions.map((p, i) => `
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="width:10px;height:10px;border-radius:50%;background:${colors[i]};flex-shrink:0;"></span>
-          <span style="color:var(--text1);flex:1;">${p.symbol || p.coin_id}</span>
+          <span style="color:var(--text1);flex:1;">${esc(p.symbol || p.coin_id)}</span>
           <span style="color:var(--text2);font-family:monospace;">${(p.alloc_pct||0).toFixed(1)}%</span>
         </div>`).join("");
     }
@@ -1167,6 +1208,7 @@ function buildCompareChart(rowsA, rowsB, labelA, labelB) {
     return rows.map(r => +((r.price_usd / base - 1) * 100).toFixed(4));
   };
 
+  const c0 = palette();
   const labelsA  = rowsA.map(r => r.fetched_at.slice(11,16));
   const maxLen   = Math.max(rowsA.length, rowsB.length);
   const xLabels  = rowsA.length >= rowsB.length
@@ -1181,13 +1223,13 @@ function buildCompareChart(rowsA, rowsB, labelA, labelB) {
         {
           label: labelA.toUpperCase() + " %",
           data: norm(rowsA),
-          borderColor: CHART_COLORS[labelA] || "#06b6d4",
+          borderColor: c0.accent,
           borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false,
         },
         {
           label: labelB.toUpperCase() + " %",
           data: norm(rowsB),
-          borderColor: CHART_COLORS[labelB] || "#8b5cf6",
+          borderColor: c0.text1,
           borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false,
           borderDash: [4, 2],
         }
@@ -1196,16 +1238,15 @@ function buildCompareChart(rowsA, rowsB, labelA, labelB) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: true, labels: { color: "#9ca3af", font: { size: 11 } } },
+        legend: { display: true, labels: { color: c0.text1, font: { family: MONO, size: 11 } } },
         tooltip: {
-          backgroundColor: "#111827", borderColor: "#1f2937", borderWidth: 1,
-          titleColor: "#f9fafb", bodyColor: "#9ca3af",
+          ...tooltipStyle(c0),
           callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y >= 0 ? "+" : ""}${c.parsed.y.toFixed(2)}%` }
         }
       },
       scales: {
-        x: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#4b5563", font: { size: 10 }, maxTicksLimit: 8 }},
-        y: { position: "right", grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#4b5563", font: { size: 10 },
+        x: { grid: { color: c0.grid }, ticks: { color: c0.text2, font: { family: MONO, size: 10 }, maxTicksLimit: 8 }},
+        y: { position: "right", grid: { color: c0.grid }, ticks: { color: c0.text2, font: { family: MONO, size: 10 },
           callback: v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` }}
       },
       interaction: { intersect: false, mode: "index" },
@@ -1216,6 +1257,46 @@ function buildCompareChart(rowsA, rowsB, labelA, labelB) {
 
 let btChartInst = null;
 
+let _lastBacktest = null;
+
+function drawBacktestChart(data) {
+  const ctx = document.getElementById("btChart")?.getContext("2d");
+  if (!ctx) return;
+  _lastBacktest = data;
+  if (btChartInst) { btChartInst.destroy(); btChartInst = null; }
+  const c0 = palette();
+  const line = data.total_return >= 0 ? c0.green : c0.red;
+  const equity = data.equity || [];
+  btChartInst = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: equity.map((_, i) => i),
+      datasets: [{
+        label: "Portfolio Value",
+        data: equity.map(e => e.value),
+        borderColor: line,
+        borderWidth: 2, pointRadius: 0, tension: 0.2, fill: true,
+        backgroundColor: fade(line, 0.08),
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: {
+        ...tooltipStyle(c0),
+        callbacks: { label: c => ` $${c.parsed.y.toLocaleString("en",{maximumFractionDigits:2})}` }
+      }},
+      scales: {
+        x: { display: false },
+        y: { position: "right", grid: { color: c0.grid }, ticks: {
+          color: c0.text2, font: { family: MONO, size: 10 },
+          callback: v => `$${v >= 1000 ? (v/1000).toFixed(1)+"k" : v.toFixed(0)}`
+        }}
+      },
+      animation: { duration: 600 }
+    }
+  });
+}
+
 async function runBacktest() {
   const btn     = document.getElementById("runBacktestBtn");
   const coin    = document.getElementById("btCoin").value;
@@ -1223,6 +1304,7 @@ async function runBacktest() {
   const longW   = document.getElementById("btLongW").value;
   const capital = document.getElementById("btCapital").value;
 
+  const btnMarkup = btn.innerHTML;
   btn.textContent = "Running…";
   btn.disabled    = true;
 
@@ -1247,46 +1329,10 @@ async function runBacktest() {
     document.getElementById("bt-maxdd").textContent   = `${data.max_drawdown.toFixed(2)}%`;
     document.getElementById("bt-maxdd").style.color   = "var(--red)";
 
-    const ctx2 = document.getElementById("btChart")?.getContext("2d");
-    if (ctx2) {
-      if (btChartInst) { btChartInst.destroy(); btChartInst = null; }
-      const equity = data.equity || [];
-      btChartInst = new Chart(ctx2, {
-        type: "line",
-        data: {
-          labels: equity.map((_, i) => i),
-          datasets: [{
-            label: "Portfolio Value",
-            data: equity.map(e => e.value),
-            borderColor: ret >= 0 ? "#10b981" : "#f43f5e",
-            borderWidth: 2, pointRadius: 0, tension: 0.3, fill: true,
-            backgroundColor: (c) => {
-              const g = c.chart.ctx.createLinearGradient(0,0,0,200);
-              g.addColorStop(0, (ret >= 0 ? "#10b981" : "#f43f5e") + "30");
-              g.addColorStop(1, (ret >= 0 ? "#10b981" : "#f43f5e") + "00");
-              return g;
-            }
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: {
-            backgroundColor: "#111827", titleColor: "#f9fafb", bodyColor: "#9ca3af",
-            callbacks: { label: c => ` $${c.parsed.y.toLocaleString("en",{maximumFractionDigits:2})}` }
-          }},
-          scales: {
-            x: { display: false },
-            y: { position: "right", grid: { color: "rgba(255,255,255,0.04)" }, ticks: {
-              color: "#4b5563", font: { size: 10 },
-              callback: v => `$${v >= 1000 ? (v/1000).toFixed(1)+"k" : v.toFixed(0)}`
-            }}
-          },
-          animation: { duration: 600 }
-        }
-      });
-    }
+    drawBacktestChart(data);
 
-    const sells = (data.trades || []).filter(t => t.type === "SELL");
+    // Each record is one closed round trip: buy price, sell price, P&L and result.
+    const sells = (data.trades || []).filter(t => "sell_price" in t);
     document.getElementById("btTradeBody").innerHTML = !sells.length
       ? '<div class="empty-state">No completed trades — need more crossovers in the data.</div>'
       : `<table class="data-table">
@@ -1295,7 +1341,7 @@ async function runBacktest() {
             <td>${i + 1}</td>
             <td>$${(t.price||0).toLocaleString("en",{maximumFractionDigits:4})}</td>
             <td>$${(t.sell_price||0).toLocaleString("en",{maximumFractionDigits:4})}</td>
-            <td class="${(t.pnl||0) >= 0 ? 'up' : 'down'}">${(t.pnl||0) >= 0 ? "+" : ""}$${Math.abs(t.pnl||0).toFixed(4)}</td>
+            <td class="${(t.pnl||0) >= 0 ? 'up' : 'down'}">${(t.pnl||0) >= 0 ? "+" : "-"}$${Math.abs(t.pnl||0).toFixed(4)}</td>
             <td><span class="trade-side ${t.win ? 'buy' : 'sell'}">${t.win ? "WIN" : "LOSS"}</span></td>
           </tr>`).join("")}</tbody>
         </table>`;
@@ -1304,7 +1350,7 @@ async function runBacktest() {
   } catch(e) {
     toast("Backtest failed: " + e.message, "error");
   } finally {
-    btn.textContent = "▶ Run Backtest";
+    btn.innerHTML   = btnMarkup;
     btn.disabled    = false;
   }
 }
@@ -1327,7 +1373,7 @@ async function loadNews(coin) {
     const data = await fetch(url).then(r => r.json());
 
     if (data.error) {
-      grid.innerHTML = `<div class="empty-state">Could not load news: ${data.error}</div>`;
+      grid.innerHTML = `<div class="empty-state">Could not load news: ${esc(data.error)}</div>`;
       return;
     }
     if (!data.length) {
@@ -1338,23 +1384,23 @@ async function loadNews(coin) {
     grid.innerHTML = data.map(n => {
       const sentClass = n.sentiment === "bullish" ? "bullish" :
                         n.sentiment === "bearish" ? "bearish" : "neutral-sent";
-      const sentLabel = n.sentiment === "bullish" ? "▲ Bullish" :
-                        n.sentiment === "bearish" ? "▼ Bearish" : "— Neutral";
+      const sentLabel = n.sentiment === "bullish" ? "Bullish" :
+                        n.sentiment === "bearish" ? "Bearish" : "Neutral";
       const coins = n.currencies.filter(Boolean).slice(0, 4)
-        .map(c => `<span class="news-coin-tag">${c}</span>`).join("");
+        .map(c => `<span class="news-coin-tag">${esc(c)}</span>`).join("");
       const ago   = _timeAgo(n.published);
       return `<div class="news-card">
         <div class="news-meta">
-          <span class="news-source">${n.source || "News"}</span>
+          <span class="news-source">${esc(n.source || "News")}</span>
           <span class="news-time">${ago}</span>
           <span class="news-sentiment ${sentClass}">${sentLabel}</span>
           <span style="margin-left:auto;display:flex;gap:4px;">${coins}</span>
         </div>
-        <a class="news-title" href="${n.url}" target="_blank" rel="noopener">${n.title}</a>
+        <a class="news-title" href="${esc(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>
         ${n.votes_pos || n.votes_neg ? `
         <div class="news-votes">
-          <span style="color:var(--green);">▲ ${n.votes_pos}</span>
-          <span style="color:var(--red);">▼ ${n.votes_neg}</span>
+          <span style="color:var(--green);">${Number(n.votes_pos) || 0} up</span>
+          <span style="color:var(--red);">${Number(n.votes_neg) || 0} down</span>
         </div>` : ""}
       </div>`;
     }).join("");
@@ -1392,8 +1438,9 @@ function toast(msg, type = "info") {
   const c = document.getElementById("toastContainer");
   const t = document.createElement("div");
   t.className = `toast ${type}`;
-  t.innerHTML = `<span class="toast-msg">${msg}</span>
+  t.innerHTML = `<span class="toast-msg"></span>
     <span class="toast-close" onclick="this.parentElement.remove()">×</span>`;
+  t.querySelector(".toast-msg").textContent = msg;
   c.appendChild(t);
   setTimeout(() => t.remove(), 4000);
 }
@@ -1440,6 +1487,14 @@ const SECTION_LOADERS = {
   rules:     () => showSubTab("rules",     "allocation"),
   watchlist: loadWatchlist,
 };
+
+/* Refreshing reloads what is on screen; SECTION_LOADERS would jump back to the first sub-tab. */
+function reloadCurrentView() {
+  const id = document.querySelector(".sb-link.active")?.dataset.section || "overview";
+  const sub = document.querySelector(`#sec-${id} .sub-tab.active`)?.dataset.subtab;
+  if (sub) showSubTab(id, sub);
+  else SECTION_LOADERS[id]?.();
+}
 
 function showSection(id) {
   document.querySelectorAll(".dash-section").forEach(s => s.classList.remove("active"));
@@ -1497,12 +1552,12 @@ document.getElementById("cancelPosBtn")?.addEventListener("click", () => {
   document.getElementById("addFormCard").style.display = "none";
 });
 document.getElementById("posCoin")?.addEventListener("change", function() {
-  document.getElementById("posSym").value = this.value.slice(0, 3).toUpperCase();
+  document.getElementById("posSym").value = symbolFor(this.value);
 });
 document.getElementById("savePosBtn")?.addEventListener("click", async () => {
   const d = {
     coin_id: document.getElementById("posCoin").value,
-    symbol:  document.getElementById("posSym").value || document.getElementById("posCoin").value.slice(0, 3).toUpperCase(),
+    symbol:  document.getElementById("posSym").value || symbolFor(document.getElementById("posCoin").value),
     amount:  document.getElementById("posAmt").value,
     avg_buy: document.getElementById("posAvg").value,
   };
@@ -1521,7 +1576,7 @@ document.getElementById("savePosBtn")?.addEventListener("click", async () => {
 document.getElementById("saveTradeBtn")?.addEventListener("click", async () => {
   const d = {
     coin_id: document.getElementById("tradeCoin").value,
-    symbol:  document.getElementById("tradeCoin").value.slice(0,6).toUpperCase(),
+    symbol:  symbolFor(document.getElementById("tradeCoin").value),
     side:    document.getElementById("tradeSide").value,
     amount:  document.getElementById("tradeAmount").value,
     price:   document.getElementById("tradePrice").value,
@@ -1551,7 +1606,7 @@ document.getElementById("saveAlertBtn")?.addEventListener("click", async () => {
   try {
     const res  = await fetch("/api/price-alerts", {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({coin_id, symbol: coin_id.slice(0,6).toUpperCase(), condition, target: parseFloat(target), note})
+      body: JSON.stringify({coin_id, symbol: symbolFor(coin_id), condition, target: parseFloat(target), note})
     });
     const data = await res.json();
     if (data.ok) {
@@ -1567,6 +1622,7 @@ document.getElementById("saveAlertBtn")?.addEventListener("click", async () => {
 
 document.getElementById("runMixBtn")?.addEventListener("click", async () => {
   const btn = document.getElementById("runMixBtn");
+  const btnMarkup = btn.innerHTML;
   btn.classList.add("loading"); btn.textContent = "Running…";
   try {
     const data = await (await fetch("/api/run-mixes", {method: "POST"})).json();
@@ -1574,7 +1630,7 @@ document.getElementById("runMixBtn")?.addEventListener("click", async () => {
     if (data.ok) loadMixes();
   } catch(_) { toast("Mix calculation failed", "error"); }
   btn.classList.remove("loading");
-  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-run Calculator`;
+  btn.innerHTML = btnMarkup;
 });
 
 document.getElementById("exportBtn")?.addEventListener("click", async () => {
@@ -1588,8 +1644,7 @@ document.getElementById("refreshRing")?.addEventListener("click", async () => {
   const ring = document.getElementById("refreshRing");
   ring.classList.add("spinning");
   await refreshTicker();
-  const sec = document.querySelector(".sb-link.active")?.dataset.section || "overview";
-  SECTION_LOADERS[sec]?.();
+  reloadCurrentView();
   ring.classList.remove("spinning");
   toast("Data refreshed", "info");
 });
@@ -1602,14 +1657,12 @@ setInterval(async () => {
     countdown = 60;
     // Only fetch if SocketIO didn't already push an update
     await refreshTicker();
-    const sec = document.querySelector(".sb-link.active")?.dataset.section || "overview";
-    SECTION_LOADERS[sec]?.();
+    reloadCurrentView();
   }
   const lbl = document.getElementById("liveLabel");
   if (lbl && countdown > 0) lbl.textContent = `Refresh in ${countdown}s`;
 }, 1000);
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM ready — starting CryptoManager");
   showSection("overview");
 });

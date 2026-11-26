@@ -5,7 +5,7 @@ All settings come from config.py — no hardcoded values anywhere.
 
 import sqlite3, os, urllib.request, urllib.parse, json, time, hashlib, secrets
 import threading
-from config import DATABASE, COINGECKO
+from config import DATABASE, COINGECKO, symbol_for
 
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), DATABASE["file"])
 
@@ -67,7 +67,7 @@ def get_prices(coin_ids: list) -> list:
             
             mock_data.append({
                 "id": cid,
-                "symbol": cid[:4].upper() if len(cid) > 4 else cid.upper(),
+                "symbol": symbol_for(cid),
                 "name": cid.title(),
                 "current_price": new_price,
                 "market_cap": 1000000000,

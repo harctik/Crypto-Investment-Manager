@@ -756,7 +756,7 @@ def task_send_email(alerts: list):
         print("  No alerts to email.")
         return
 
-    subject = f"CryptoManager Alert — {len(alerts)} coin(s) moved"
+    subject = f"QuantRisk Alert — {len(alerts)} coin(s) moved"
     body    = "\n".join(a["message"] for a in alerts)
 
     provider = EMAIL.get("provider", "smtp").lower()
