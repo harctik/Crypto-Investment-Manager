@@ -88,6 +88,17 @@ COINGECKO = {
 
 WATCHLIST = COINGECKO["watchlist"]
 
+# Ticker symbols for when CoinGecko is unreachable. static/js/dashboard.js has the same map.
+SYMBOLS = {
+    "bitcoin": "BTC", "ethereum": "ETH", "binancecoin": "BNB", "solana": "SOL",
+    "cardano": "ADA", "ripple": "XRP", "matic-network": "MATIC", "chainlink": "LINK",
+    "dogecoin": "DOGE", "usd-coin": "USDC",
+}
+
+
+def symbol_for(coin_id):
+    return SYMBOLS.get(coin_id) or coin_id[:6].upper()
+
 API = {
     "base_url":    COINGECKO["base_url"],
     "vs_currency": COINGECKO["vs_currency"],

@@ -23,7 +23,7 @@ import milestone2_mix_calculator as m2
 import milestone3_risk_predictor  as m3
 import milestone4_spreading_rules as m4
 import milestone5_backtest         as m5
-from config import WATCHLIST, RISK, SPREAD, REPORTS, MIX, APP
+from config import WATCHLIST, RISK, SPREAD, REPORTS, MIX, APP, symbol_for
 
 app = Flask(__name__)
 app.secret_key = APP["secret_key"]
@@ -314,7 +314,7 @@ def get_cached_coins(wl):
         info = latest.get(coin_id)
         if info:
             result.append({
-                "id": coin_id, "symbol": coin_id[:4].upper(),
+                "id": coin_id, "symbol": symbol_for(coin_id),
                 "name": coin_id, "current_price": info["price_usd"],
                 "price_change_percentage_24h": info.get("change_24h", 0) or 0,
                 "market_cap": 0, "total_volume": 0,
@@ -350,7 +350,7 @@ def api_run_mixes():
     mixes   = m2.task_run_mixes(returns)
     if mixes:
         m2.task_show_and_save(mixes)
-        return jsonify({"ok": True, "message": f"{MIX['iterations']} iterations done"})
+        return jsonify({"ok": True, "message": "Mixes recalculated"})
     return jsonify({"ok": False, "message": "Not enough history"}), 400
 
 @app.route("/api/export-csv", methods=["POST"])
@@ -756,7 +756,7 @@ def api_news():
             results.append({
                 "title":      headline,
                 "url":        f"https://www.coingecko.com/en/coins/{cid}",
-                "source":     "CryptoManager Live",
+                "source":     "QuantRisk price moves",
                 "published":  now - 60,
                 "sentiment":  sentiment,
                 "votes_pos":  0, "votes_neg": 0,
@@ -790,9 +790,9 @@ def api_news():
 
     if not results:
         return jsonify([{
-            "title":      "Welcome to CryptoManager News - prices are loading...",
+            "title":      "Welcome to QuantRisk news. Prices are loading...",
             "url":        "#",
-            "source":     "CryptoManager",
+            "source":     "QuantRisk",
             "published":  now,
             "sentiment":  "neutral",
             "votes_pos":  0, "votes_neg": 0,
@@ -855,5 +855,5 @@ if __name__ == "__main__":
     from config import DATABASE
     retention = DATABASE.get("retention_days", 90)
     database.cleanup_old_history(retention)
-    print("\n CryptoManager  ->  http://localhost:5000\n")
+    print("\n QuantRisk  ->  http://localhost:5000\n")
     socketio.run(app, host=APP["host"], port=APP["port"], debug=APP["debug"], use_reloader=False, allow_unsafe_werkzeug=True)

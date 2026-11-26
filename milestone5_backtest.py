@@ -310,7 +310,9 @@ def backtest_ensemble(prices: list, short_w: int = 5, long_w: int = 15,
 def _summarise(prices, capital, cash, holding, trades, equity, max_dd):
     final_val    = (holding * prices[-1]) + cash if holding else cash
     total_return = (final_val - capital) / capital * 100
-    completed    = [t for t in trades if t["type"] == "SELL"]
+    # A completed round trip is the BUY record that has been closed: it holds
+    # the buy price, sell price, P&L and win flag together.
+    completed    = [t for t in trades if "sell_price" in t]
     wins         = [t for t in completed if t.get("win")]
     win_rate     = len(wins) / len(completed) * 100 if completed else 0
 
@@ -321,7 +323,8 @@ def _summarise(prices, capital, cash, holding, trades, equity, max_dd):
         "max_drawdown": round(max_dd, 2),
         "total_trades": len(completed),
         "win_rate":     round(win_rate, 1),
-        "trades":       [t for t in trades if t["type"] == "SELL"],
+        "trades":       completed,
+        "equity":       equity,
         "snapshots":    len(prices),
     }
 
