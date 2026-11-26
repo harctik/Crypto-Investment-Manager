@@ -110,6 +110,12 @@ python app.py
 # Access http://localhost:5000 in your browser (admin / admin123)
 ```
 
+#### Test sign-in (local only)
+
+For testing on your own computer, start the dashboard with `DEMO_LOGIN=1` set in the environment. You can then sign in with the username `admin` and the password `admin`. It opens the seeded admin account.
+
+It is off by default. It only accepts requests from the same computer that carry no proxy headers, and it stays off when `FLASK_ENV=production` or on common hosting services.
+
 ### 3. Run the CLI Engine
 ```bash
 python main.py
