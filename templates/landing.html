@@ -43,7 +43,7 @@
         </div>
         <figure class="shot">
           <img src="{{ url_for('static', filename='img/dashboard.png') }}" width="1440" height="900" alt="The QuantRisk dashboard overview">
-          <figcaption>The dashboard overview, captured from the running app with its demo account.</figcaption>
+          <figcaption>The dashboard overview, captured from a local run with sample holdings.</figcaption>
         </figure>
       </div>
     </section>
@@ -66,7 +66,7 @@
           </div>
           <div>
             <dt>Allocation</dt>
-            <dd>Mixes for best Sharpe ratio, best return and lowest risk, alongside risk parity and minimum variance.</dd>
+            <dd>Mixes for best Sharpe ratio, best return and lowest risk, and a risk-parity target compared with your current holdings.</dd>
           </div>
           <div>
             <dt>Rules and stress tests</dt>
@@ -74,7 +74,7 @@
           </div>
           <div>
             <dt>Backtests</dt>
-            <dd>Moving-average crossover, RSI, Bollinger Band and ensemble strategies, shown against buy and hold.</dd>
+            <dd>A moving-average crossover on the dashboard. The command line also compares RSI, Bollinger Band and ensemble strategies with buy and hold.</dd>
           </div>
         </dl>
       </div>
@@ -111,7 +111,7 @@
         <div>
           <pre><code>pip install -r requirements.txt
 python app.py</code></pre>
-          <p class="aside">Demo account: <code>admin</code> / <code>admin123</code></p>
+          <p class="aside">There are no built-in passwords. Choose “Create an account” on the sign-in page.</p>
           <table class="modules">
             <thead><tr><th>File</th><th>What is in it</th></tr></thead>
             <tbody>

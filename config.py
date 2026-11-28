@@ -4,6 +4,7 @@ Install python-dotenv:  pip install python-dotenv
 """
 
 import os
+import secrets
 from pathlib import Path
 
 # ── Load .env file ────────────────────────────────────────────────────────────
@@ -34,7 +35,9 @@ APP = {
     "name":       "CryptoManager",
     "env":        os.getenv("APP_ENV", "development"),
     "debug":      _bool("DEBUG", "false"),
-    "secret_key": os.getenv("SECRET_KEY", "crypto-secure-key-2025-change-in-prod"),
+    # No fixed fallback: a key published in the source would let anyone forge a session.
+    # Without SECRET_KEY, sessions end when the process restarts.
+    "secret_key": os.getenv("SECRET_KEY") or secrets.token_hex(32),
     "host":       os.getenv("HOST", "0.0.0.0"),
     "port":       _int("PORT", 5000),
 }
@@ -98,6 +101,18 @@ SYMBOLS = {
 
 def symbol_for(coin_id):
     return SYMBOLS.get(coin_id) or coin_id[:6].upper()
+
+
+# Display names. static/js/dashboard.js has the same map.
+COIN_NAMES = {
+    "bitcoin": "Bitcoin", "ethereum": "Ethereum", "binancecoin": "BNB", "solana": "Solana",
+    "cardano": "Cardano", "ripple": "XRP", "matic-network": "Polygon", "chainlink": "Chainlink",
+    "dogecoin": "Dogecoin", "usd-coin": "USD Coin",
+}
+
+
+def coin_name(coin_id):
+    return COIN_NAMES.get(coin_id) or coin_id.replace("-", " ").title()
 
 API = {
     "base_url":    COINGECKO["base_url"],
