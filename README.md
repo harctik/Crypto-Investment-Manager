@@ -1,141 +1,139 @@
-# QuantRisk: Autonomous Cryptocurrency Risk & Portfolio Optimization Engine
+# <img src="static/img/mark.svg" alt="" width="28" height="28"> QuantRisk
 
-Quantitative portfolio management, risk analytics, and algorithmic backtesting platform built in Python and Flask. Engineered from scratch during the Infosys Springboard 6.0 internship program to model empirical asset covariance, calculate the Markowitz Efficient Frontier, and evaluate downside tail risk using Monte Carlo simulations.
+A Flask web app for tracking a crypto portfolio, measuring its risk, comparing allocations and backtesting simple trading strategies. It stores data in SQLite and gets market data from CoinGecko. I built it in five milestones during an Infosys Springboard 6.0 internship.
 
-Live Deployment: https://cryptomanagerapp.vercel.app
+Live site: https://cryptomanagerapp.vercel.app
 
----
+Every result is an estimate based on past prices. It is not financial advice.
 
-## Technical Overview
+![QuantRisk dashboard overview](static/img/dashboard.png)
 
-Cryptocurrency assets display pronounced fat-tailed distributions, rapid volatility spikes, and sudden breakdowns in asset diversification during market stress. Standard consumer tracking tools merely display price histories without quantifying correlation dynamics or downside capital exposure.
+The screenshots come from a local run with sample holdings.
 
-QuantRisk models these dynamics mathematically:
-1. Historical price series are retrieved from the CoinGecko API and structured into local SQLite tables.
-2. The portfolio engine calculates empirical covariance matrices and applies Sequential Least Squares Programming (SLSQP) to determine optimal capital weights that maximize the Sharpe ratio.
-3. The risk analytics module evaluates historical and parametric Value at Risk (VaR) and Conditional VaR (Expected Shortfall) at the 95% and 99% confidence tiers.
-4. Downside stress testing generates one thousand stochastic price paths using Monte Carlo simulations.
-5. The backtesting subsystem simulates algorithmic trading strategies against historical price bars.
+## What it does
 
----
+| Page | Contents |
+|---|---|
+| Overview | Portfolio summary, price history charts, alerts for 24-hour moves, and market updates |
+| Portfolio | Positions with unrealised profit and loss, and a trade log with FIFO realised profit and loss |
+| Analysis | Price estimates, risk figures, allocation mixes and a backtest |
+| Rules | Current holdings against a risk-parity target, correlation warnings, stress scenarios and price alerts |
+| Watchlist | Search CoinGecko and add coins |
 
-## Application Interface & Visual Analytics
+The Export CSV button writes price, risk, estimate and alert files to a `reports/` folder on the server.
 
-### Web Analytics Dashboard
-The Flask web interface presents portfolio allocations, daily returns, correlation matrices, and risk metrics in real time, pulling live quotes and calculating portfolio health on demand.
+The market updates are lines that QuantRisk generates from CoinGecko trending and price data and from the alternative.me Fear and Greed index. They are not news articles.
 
-![QuantRisk Web Dashboard](Flask_Dashboard.png)
+![Portfolio positions](docs/screenshots/portfolio.png)
 
-### Multi-Asset Volatility & Volume Comparison
-Market monitoring tracks 24-hour liquidity distribution and multi-day volatility trends across the tracked cryptocurrency universe.
+## How the numbers are calculated
 
-![24-Hour Volume Comparison](docs/plots/24h_volume_comparison.png)
+| Result | Method |
+|---|---|
+| Value at risk and expected shortfall | Historical, at 95% confidence |
+| Other risk figures | Volatility, Sharpe, Sortino and Calmar ratios, and maximum drawdown |
+| Allocation mixes | Mean-variance optimisation with SciPy's SLSQP solver, with at least 5% in each coin. Random sampling is used only if SciPy is missing. |
+| Risk-parity target | Weights inversely proportional to volatility, limited to the allocation rules and then rescaled to 100% |
+| Price estimates | Ridge regression on price indicators with scikit-learn, with linear regression as the fallback. RSI, MACD and Bollinger Bands are shown alongside. |
+| Stress scenarios | Six fixed changes to the whole portfolio, from a 60% fall to a 50% rise |
+| Monte Carlo stress (`/api/monte-carlo`, not shown in the dashboard) | 10,000 runs by default, up to 50,000. Each coin is sampled independently from its stored returns, so links between coins are not modelled. |
+| Backtests | The dashboard runs a moving-average crossover. The API and command line also have RSI, Bollinger Band and ensemble strategies. Fees and slippage are not modelled. |
 
-Time-series trajectory tracking records intraday high-frequency price shifts, identifying momentum reversals and volume divergence.
+Limits to keep in mind:
 
-![Solana 7-Day Price Trajectory](docs/plots/sol_7day_line.png)
+- Risk figures are calculated per stored price snapshot and are not annualised. A new database is filled with 30 days of CoinGecko history for most of the default coins. The running app then adds a snapshot about every 60 seconds, so recent data is spaced much more closely than the older history.
+- If CoinGecko cannot be reached, the app falls back to simulated prices. Price alerts and market updates skip these quotes, but they are still saved to price history and can affect charts, portfolio values, risk figures and the 24-hour move alerts.
+- MATIC is still on the default list under its old CoinGecko ID. It is not in the 30-day history download and may show a flat price, which distorts its risk figures and allocation weights.
 
-### Modern Portfolio Theory and Covariance Matrix
-The mixing calculator aligns multi-asset historical returns, computes the empirical covariance matrix, and executes constrained optimization to establish the Efficient Frontier.
+![Moving-average crossover backtest](docs/screenshots/backtest.png)
 
-![Portfolio Covariance Matrix](Milestone2_Mix.png)
+## Run it locally
 
-### Downside Tail Risk and Monte Carlo Simulation
-The risk prediction engine models tail risk using parametric and historical Value at Risk (VaR), Conditional VaR, and stochastic Monte Carlo stress testing across simulated volatility regimes.
+You need Python 3.10 or later.
 
-![Tail Risk Analytics](Milestone3_Risk.png)
-
-### Algorithmic Trading Strategy Backtest
-The backtesting engine evaluates historical performance of Moving Average Crossover, Relative Strength Index (RSI), and Bollinger Band breakout strategies with transaction cost modeling.
-
-![Strategy Backtest Engine](Milestone5_Backtest.png)
-
----
-
-## Mathematical Formulation
-
-### 1. Modern Portfolio Theory Optimization
-For an asset universe with return vector $\boldsymbol{\mu}$ and covariance matrix $\boldsymbol{\Sigma}$, the portfolio expected return and variance are defined as:
-
-$$\mathbb{E}[R_p] = \mathbf{w}^T \boldsymbol{\mu}$$
-
-$$\sigma_p^2 = \mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}$$
-
-The optimization solver maximizes the Sharpe ratio subject to full investment and minimum allocation constraints:
-
-$$\max_{\mathbf{w}} \frac{\mathbf{w}^T \boldsymbol{\mu} - R_f}{\sqrt{\mathbf{w}^T \boldsymbol{\Sigma} \mathbf{w}}} \quad \text{subject to} \quad \sum_{i=1}^{n} w_i = 1, \quad w_i \ge w_{\min}$$
-
-### 2. Downside Tail Risk Modeling
-Loss distributions are evaluated using historical simulation at confidence level $\alpha$:
-
-$$\text{VaR}_\alpha(L) = \inf \{ l \in \mathbb{R} : P(L > l) \le 1 - \alpha \}$$
-
-$$\text{CVaR}_\alpha(L) = \mathbb{E}[L \mid L \ge \text{VaR}_\alpha(L)]$$
-
-Unlike standard variance, Conditional VaR explicitly captures the expected magnitude of catastrophic losses in the tail of the distribution.
-
----
-
-## Subsystem Specifications
-
-| Milestone | Subsystem Module | Core Responsibilities | Mathematical / Engineering Output |
-|---|---|---|---|
-| Milestone 1 | Workspace & Ingestion | SQLite initialization, CoinGecko API polling, schema validation | Clean tabular price series and daily return logs |
-| Milestone 2 | Portfolio Mix Engine | Covariance matrix estimation, Markowitz Efficient Frontier | SLSQP optimal asset weight vectors maximizing Sharpe |
-| Milestone 3 | Downside Risk Modeler | Monte Carlo stress testing, Value at Risk, Conditional VaR | VaR 95/99, Expected Shortfall, Sortino, Calmar ratios |
-| Milestone 4 | Dynamic Rebalancing | Risk parity allocation heuristics, automated drift thresholds | Portfolio rebalancing orders, target weight alignment |
-| Milestone 5 | Backtesting Engine | Historical simulation for SMA crossover, RSI, Bollinger Bands | Cumulative return, maximum drawdown, win-loss ratio |
-
----
-
-## Local Development & Setup
-
-### 1. Repository Setup
 ```bash
 git clone https://github.com/harctik/Crypto-Investment-Manager.git
 cd Crypto-Investment-Manager
 python -m venv venv
 
-# Windows:
+# Windows
 venv\Scripts\activate
-# Linux/macOS:
+# Linux or macOS
 source venv/bin/activate
 
 pip install -r requirements.txt
-```
-
-### 2. Launch the Web Dashboard
-```bash
 python app.py
-# Access http://localhost:5000 in your browser (admin / admin123)
 ```
 
-#### Test sign-in (local only)
+Open http://localhost:5000.
 
-For testing on your own computer, start the dashboard with `DEMO_LOGIN=1` set in the environment. You can then sign in with the username `admin` and the password `admin`. It opens the seeded admin account.
+### Accounts
 
-It is off by default. It only accepts requests from the same computer that carry no proxy headers, and it stays off when `FLASK_ENV=production` or on common hosting services.
+There are no built-in passwords, and a new database has no accounts. Choose "Create an account" on the sign-in page.
 
-### 3. Run the CLI Engine
+You can also create starter accounts from environment variables. This happens only while the users table is empty. Each password must have at least 8 characters.
+
+| Variable | Account created |
+|---|---|
+| `SEED_ADMIN_PASSWORD` | `admin`, with sample positions, trades and notes |
+| `SEED_TRADER_PASSWORD` | `trader` |
+| `SEED_DEMO_PASSWORD` | `demo` |
+
+These variables do not change or remove accounts in an existing database. The repository includes a database, `data/crypto_data.db`, which a local run uses unless `DB_FILE` points somewhere else. It already contains accounts, so set `DB_FILE` to a new path to start empty.
+
+### Test sign-in (local only)
+
+For testing on your own computer, start the app with `DEMO_LOGIN=1` set in the environment. This enables a fixed test sign-in for the `admin` account. The values are defined in [`demo_login.py`](demo_login.py). If the database has no `admin` account, the first test sign-in creates one with sample holdings. An existing account is not changed, and it must have the Admin role.
+
+The test sign-in is off by default. It accepts only requests from the same computer that carry no proxy headers, and it stays off when `FLASK_ENV=production` or on common hosting services. Do not enable it on a server that other people can reach.
+
+### Settings
+
+Set these as environment variables or in a `.env` file.
+
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Signs session cookies. Set a long random value on any deployment. Without it, each process makes its own key, so a restart signs everyone out, and multiple instances do not accept each other's sessions. |
+| `DB_FILE` | Path to the SQLite database |
+| `HOST`, `PORT` | Where `python app.py` listens. The defaults are `0.0.0.0` and `5000`; use `HOST=127.0.0.1` to keep the app on your own computer. |
+| `COINGECKO_API_KEY` | Optional CoinGecko API key |
+| `RISK_FREE_RATE` | Risk-free rate used in the ratios, 0.02 by default |
+| `MONTE_CARLO_SIMS` | Default number of Monte Carlo runs |
+| `EMAIL_ENABLED` | Set to `true` to let the command-line run email its 24-hour move alerts. See `config.py` for the other email settings. |
+
+On Vercel, the app copies the bundled database to temporary storage. New accounts and other changes made there are not guaranteed to persist.
+
+## Command line
+
 ```bash
 python main.py
 ```
 
-### 4. Execute Unit Tests
+This runs the five milestones in order. It writes to the same database as the web app, adds sample positions if the first user's portfolio is empty, and saves CSV files to `reports/`.
+
+| File | Contents |
+|---|---|
+| `app.py` | Web server and API |
+| `database.py` | SQLite storage and CoinGecko client |
+| `config.py` | Settings |
+| `milestone1_setup.py` | Data setup |
+| `milestone2_mix_calculator.py` | Allocation optimiser |
+| `milestone3_risk_predictor.py` | Risk figures and price estimates |
+| `milestone4_spreading_rules.py` | Allocation rules and stress tests |
+| `milestone5_backtest.py` | Backtests |
+
+## Tests
+
 ```bash
+pip install pytest flake8
+flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv,data
 pytest tests/ -v
 ```
 
----
+## Author
 
-## Author and Engineering Attribution
+Avvari Naga Harthikanand (Harthik), Bangalore, Karnataka, India
 
-All mathematical modeling, risk calculations, backtesting algorithms, and software implementation in this repository were engineered end-to-end by Avvari Naga Harthikanand (Harthik) as part of the Infosys Springboard 6.0 program.
-
-Developer: Avvari Naga Harthikanand
-Location: Bangalore, Karnataka, India
-LinkedIn: https://www.linkedin.com/in/harthik
-GitHub: https://github.com/harctik
-Email: harthikanand90@gmail.com
-Live Demo: https://cryptomanagerapp.vercel.app
-License: MIT License
+- LinkedIn: https://www.linkedin.com/in/harthik
+- GitHub: https://github.com/harctik
+- Email: harthikanand90@gmail.com
