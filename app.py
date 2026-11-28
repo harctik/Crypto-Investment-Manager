@@ -13,8 +13,8 @@ import urllib.request, urllib.parse, json as _json
 from functools import wraps
 
 from flask import (Flask, render_template, request, jsonify,
-                   session, redirect, url_for)
-from flask_socketio import SocketIO, emit
+                   session, redirect, url_for, abort)
+from flask_socketio import SocketIO, emit, join_room
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -24,14 +24,16 @@ import milestone2_mix_calculator as m2
 import milestone3_risk_predictor  as m3
 import milestone4_spreading_rules as m4
 import milestone5_backtest         as m5
-from config import WATCHLIST, RISK, SPREAD, REPORTS, MIX, APP, symbol_for
+from config import WATCHLIST, RISK, SPREAD, REPORTS, MIX, APP, symbol_for, coin_name
 
 app = Flask(__name__)
+app.jinja_env.globals["coin_name"] = coin_name
 app.secret_key = APP["secret_key"]
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"]   = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", manage_session=False)
+# No cors_allowed_origins: the live feed only accepts pages served by this app.
+socketio = SocketIO(app, async_mode="threading", manage_session=False)
 
 # ── In-memory TTL cache for expensive analysis endpoints ────────────────────
 _cache = {}  # key -> {"data": ..., "ts": time.time()}
@@ -64,12 +66,18 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user_id" not in session:
+            if request.path.startswith("/api/"):
+                return jsonify({"ok": False, "error": "Sign in required"}), 401
             return redirect(url_for("login_page"))
         return f(*args, **kwargs)
     return decorated
 
 def current_user_id():
-    return session.get("user_id", 1)
+    """The signed-in user's id. There is no default account: no session means 401."""
+    uid = session.get("user_id")
+    if uid is None:
+        abort(401)
+    return uid
 
 def get_watchlist():
     """Return per-user watchlist if populated, else fall back to config WATCHLIST."""
@@ -126,9 +134,9 @@ def do_login():
             session["theme"]    = user.get("theme", "dark")
             return jsonify({"ok": True, "redirect": url_for("dashboard")})
         return jsonify({"ok": False, "error": "Invalid credentials"}), 401
-    except Exception as e:
-        import traceback; traceback.print_exc()
-        return jsonify({"ok": False, "error": f"Server error: {str(e)}"}), 500
+    except Exception:
+        app.logger.exception("Sign-in failed")
+        return jsonify({"ok": False, "error": "Sign-in failed because of a server error."}), 500
 
 @app.route("/register", methods=["POST"])
 def do_register():
@@ -318,7 +326,7 @@ def get_cached_coins(wl):
         if info:
             result.append({
                 "id": coin_id, "symbol": symbol_for(coin_id),
-                "name": coin_id, "current_price": info["price_usd"],
+                "name": coin_name(coin_id), "current_price": info["price_usd"],
                 "price_change_percentage_24h": info.get("change_24h", 0) or 0,
                 "market_cap": 0, "total_volume": 0,
             })
@@ -649,8 +657,10 @@ def api_fear_greed():
         }
         _set_cache("fear-greed", result)
         return jsonify(result)
-    except Exception as e:
-        return jsonify({"value": 50, "label": "Unknown", "error": str(e)})
+    except Exception:
+        app.logger.warning("Fear & Greed request failed", exc_info=True)
+        return jsonify({"value": 50, "label": "Unknown",
+                        "error": "Fear & Greed index unavailable"})
 
 @app.route("/api/backtest")
 @login_required
@@ -697,7 +707,8 @@ def api_backtest():
 @app.route("/api/news")
 @login_required
 def api_news():
-    """Generate real-time crypto market news from live price data + trending."""
+    """Short market lines that this app writes from CoinGecko trending data, price
+    changes and the Fear & Greed index. They are not news articles."""
     coin_filter = request.args.get("coin", "").strip().lower()
     results = []
     now = int(time.time())
@@ -720,17 +731,16 @@ def api_news():
                 if coin_filter and coin_filter not in coin_id.lower() and coin_filter not in symbol.lower():
                     continue
 
-                if price_chg > 3:      sentiment, action = "bullish", "surging"
-                elif price_chg > 0:    sentiment, action = "bullish", "rising"
-                elif price_chg < -3:   sentiment, action = "bearish", "dropping"
-                elif price_chg < 0:    sentiment, action = "bearish", "declining"
-                else:                  sentiment, action = "neutral", "steady"
+                if price_chg > 0:      sentiment = "bullish"
+                elif price_chg < 0:    sentiment = "bearish"
+                else:                  sentiment = "neutral"
 
                 results.append({
-                    "title":      f"{name} ({symbol}) is trending on CoinGecko - price {action} {price_chg:+.1f}% in 24h",
+                    "title":      f"{name} ({symbol}) is on CoinGecko's trending list, {price_chg:+.1f}% in 24h",
                     "url":        f"https://www.coingecko.com/en/coins/{coin_id}",
-                    "source":     "CoinGecko Trending",
-                    "published":  now - i * 120,
+                    "source":     "Auto-generated from CoinGecko trending",
+                    "published":  now,
+                    "generated":  True,
                     "sentiment":  sentiment,
                     "votes_pos":  0, "votes_neg": 0,
                     "currencies": [symbol],
@@ -742,6 +752,8 @@ def api_news():
     try:
         coins = database.get_prices(WATCHLIST)
         for c in (coins or []):
+            if c.get("simulated"):
+                continue  # never describe made-up fallback prices as market moves
             cid   = c.get("id", "")
             sym   = (c.get("symbol") or "").upper()
             chg24 = c.get("price_change_percentage_24h", 0) or 0
@@ -750,17 +762,16 @@ def api_news():
             if coin_filter and coin_filter not in cid.lower() and coin_filter not in sym.lower():
                 continue
 
-            if chg24 > 5:      sentiment, headline = "bullish",  f"{sym} rallies {chg24:+.2f}% to ${price:,.2f} in the last 24 hours"
-            elif chg24 > 0:    sentiment, headline = "bullish",  f"{sym} gains {chg24:+.2f}%, now trading at ${price:,.2f}"
-            elif chg24 < -5:   sentiment, headline = "bearish",  f"{sym} tumbles {chg24:.2f}% to ${price:,.2f} in 24-hour selloff"
-            elif chg24 < 0:    sentiment, headline = "bearish",  f"{sym} slips {chg24:.2f}%, currently at ${price:,.2f}"
-            else:              sentiment, headline = "neutral",  f"{sym} holds steady at ${price:,.2f} with minimal movement"
+            if chg24 > 0:      sentiment = "bullish"
+            elif chg24 < 0:    sentiment = "bearish"
+            else:              sentiment = "neutral"
 
             results.append({
-                "title":      headline,
+                "title":      f"{sym}: {chg24:+.2f}% in 24h, price ${price:,.2f}",
                 "url":        f"https://www.coingecko.com/en/coins/{cid}",
-                "source":     "QuantRisk price moves",
-                "published":  now - 60,
+                "source":     "Auto-generated from price data",
+                "published":  now,
+                "generated":  True,
                 "sentiment":  sentiment,
                 "votes_pos":  0, "votes_neg": 0,
                 "currencies": [sym],
@@ -780,10 +791,11 @@ def api_news():
             label = item.get("value_classification", "Neutral")
             sentiment = "bullish" if val >= 70 else "bearish" if val <= 30 else "neutral"
             results.append({
-                "title":      f"Crypto Fear & Greed Index at {val} ({label}) - market sentiment update",
+                "title":      f"Crypto Fear & Greed Index: {val} ({label})",
                 "url":        "https://alternative.me/crypto/fear-and-greed-index/",
-                "source":     "Fear & Greed Index",
-                "published":  now - 300,
+                "source":     "Auto-generated from alternative.me",
+                "published":  now,
+                "generated":  True,
                 "sentiment":  sentiment,
                 "votes_pos":  0, "votes_neg": 0,
                 "currencies": [],
@@ -793,10 +805,11 @@ def api_news():
 
     if not results:
         return jsonify([{
-            "title":      "Welcome to QuantRisk news. Prices are loading...",
+            "title":      "No market data is available right now. Try again in a minute.",
             "url":        "#",
             "source":     "QuantRisk",
             "published":  now,
+            "generated":  True,
             "sentiment":  "neutral",
             "votes_pos":  0, "votes_neg": 0,
             "currencies": [],
@@ -830,18 +843,31 @@ def _broadcaster():
                 _cache.pop(f"risk:{','.join(WATCHLIST)}", None)
                 _cache.pop(f"pred:{','.join(WATCHLIST)}", None)
                 socketio.emit("alert_update", m3.task_check_alerts(coins, save=False))
-                live  = {c["id"]: c["current_price"] for c in coins}
-                fired = database.check_and_fire_alerts(live)
-                if fired:
-                    socketio.emit("price_alert_fired", fired)
+                # Simulated fallback prices must not trigger anyone's price alert.
+                live  = {c["id"]: c["current_price"] for c in coins if not c.get("simulated")}
+                _send_fired_alerts(database.check_and_fire_alerts(live))
         except Exception as e:
             import traceback; traceback.print_exc()
             print(f"[Broadcast] {e}")
         time.sleep(60)
 
+def _user_room(user_id):
+    return f"user:{user_id}"
+
+def _send_fired_alerts(fired):
+    """Send each user only their own triggered alerts."""
+    by_user = {}
+    for alert in fired:
+        by_user.setdefault(alert["user_id"], []).append(alert)
+    for user_id, alerts in by_user.items():
+        socketio.emit("price_alert_fired", alerts, to=_user_room(user_id))
+
 @socketio.on("connect")
-def on_connect():
+def on_connect(auth=None):
     global _bg_started
+    if "user_id" not in session:
+        return False  # the live feed is for signed-in users only
+    join_room(_user_room(session["user_id"]))
     if not _bg_started:
         threading.Thread(target=_broadcaster, daemon=True).start()
         _bg_started = True

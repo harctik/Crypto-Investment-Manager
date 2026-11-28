@@ -72,7 +72,8 @@ def get_prices(coin_ids: list) -> list:
                 "current_price": new_price,
                 "market_cap": 1000000000,
                 "total_volume": 50000000,
-                "price_change_percentage_24h": chg
+                "price_change_percentage_24h": chg,
+                "simulated": True,
             })
         return mock_data
 
@@ -272,26 +273,40 @@ def init_db():
         """)
     print(f"  [DB] Ready  ->  {DB_FILE}")
     _seed_default_users()
-    _seed_demo_portfolio(1)  # Ensure admin always has demo data
     _seed_price_history()    # Fetch 30 days of price history for charts/predictions
 
 
+# Starter accounts are opt-in: each is created only when its password is supplied.
+SEED_ACCOUNTS = (
+    ("admin",  "SEED_ADMIN_PASSWORD",  "Admin"),
+    ("trader", "SEED_TRADER_PASSWORD", "Trader"),
+    ("demo",   "SEED_DEMO_PASSWORD",   "Viewer"),
+)
+SEED_MIN_PASSWORD_LENGTH = 8
+
+
 def _seed_default_users():
+    """On an empty users table, create the accounts whose password is set in the
+    environment. There are no built-in passwords. Existing users are never touched."""
     with conn() as c:
-        count = c.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-        if count == 0:
-            for username, password, role, avatar in [
-                ("admin",  "admin123", "Admin",  "A"),
-                ("trader", "trade456", "Trader", "T"),
-                ("demo",   "demo",     "Viewer", "D"),
-            ]:
-                salt  = secrets.token_hex(16)
-                phash = _hash_password(password, salt)
-                c.execute(
-                    "INSERT OR IGNORE INTO users (username,password_hash,salt,role,avatar) VALUES (?,?,?,?,?)",
-                    (username, phash, salt, role, avatar))
-            # Seed demo portfolio for admin (user_id = 1)
-            _seed_demo_portfolio(1)
+        if c.execute("SELECT COUNT(*) FROM users").fetchone()[0]:
+            return
+    for username, variable, role in SEED_ACCOUNTS:
+        password = os.getenv(variable, "")
+        if not password:
+            continue
+        if len(password) < SEED_MIN_PASSWORD_LENGTH:
+            print(f"  [DB] {variable} is shorter than {SEED_MIN_PASSWORD_LENGTH} characters; "
+                  f"'{username}' was not created")
+            continue
+        if create_user(username, password, role) and role == "Admin":
+            _seed_demo_portfolio(user_id_for(username))
+
+
+def user_id_for(username: str):
+    with conn() as c:
+        row = c.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+    return row["id"] if row else None
 
 
 def _seed_demo_portfolio(user_id: int):

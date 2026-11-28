@@ -20,6 +20,15 @@ const SYMBOLS = {
 };
 const symbolFor = id => SYMBOLS[id] || String(id).slice(0, 6).toUpperCase();
 
+// Display names. config.py has the same map.
+const COIN_NAMES = {
+  bitcoin: "Bitcoin", ethereum: "Ethereum", binancecoin: "BNB", solana: "Solana",
+  cardano: "Cardano", ripple: "XRP", "matic-network": "Polygon", chainlink: "Chainlink",
+  dogecoin: "Dogecoin", "usd-coin": "USD Coin",
+};
+const nameFor = id => COIN_NAMES[id] ||
+  String(id).split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+
 const band = v => (+v).toLocaleString("en", { maximumFractionDigits: v >= 100 ? 0 : v >= 1 ? 2 : 4 });
 
 /* Chart colours come from the stylesheet so they follow the light and dark themes */
@@ -491,7 +500,7 @@ async function loadPortfolio() {
       return `<tr>
         <td class="name-cell">
           <span style="font-weight:600;">${esc(p.symbol)}</span>
-          <span style="color:var(--text2);font-size:11px;display:block;">${esc(p.coin_id)}</span>
+          <span style="color:var(--text2);font-size:11px;display:block;">${esc(nameFor(p.coin_id))}</span>
         </td>
         <td style="font-family:var(--font-mono,monospace);font-size:12px;">${(+p.amount).toLocaleString("en",{maximumFractionDigits:8})}</td>
         <td>$${(+p.avg_buy).toLocaleString("en",{maximumFractionDigits:4})}</td>
@@ -589,7 +598,7 @@ async function loadPredictions() {
       return `<div class="pred-card ${sig}">
         <div class="pred-header">
           <div>
-            <div class="pred-coin">${esc(p.coin_id)}</div>
+            <div class="pred-coin">${esc(nameFor(p.coin_id))}</div>
             <div class="pred-price">$${(+p.current_price).toLocaleString("en", {maximumFractionDigits: 4})}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
@@ -657,7 +666,7 @@ async function loadRisk() {
 
       return `<div class="risk-card">
         <div class="risk-header">
-          <div class="risk-coin">${esc(r.coin_id)}</div>
+          <div class="risk-coin">${esc(nameFor(r.coin_id))}</div>
           <span class="tier-badge ${tier}">${r.risk_tier}</span>
         </div>
         <div class="risk-bar-wrap">
@@ -731,7 +740,7 @@ async function loadMixes() {
       const mx   = data[key];
       const bars = mx.coins.map((c, j) => `
         <div class="mix-alloc-row">
-          <div class="mix-coin-name">${esc(c)}</div>
+          <div class="mix-coin-name">${esc(nameFor(c))}</div>
           <div class="mix-bar">
             <div class="mix-fill" style="width:${(mx.weights[j]*100).toFixed(1)}%"></div>
           </div>
@@ -779,7 +788,7 @@ async function loadRules() {
         const driftColor = driftOk ? "var(--green)" : "var(--red)";
         const arrow = cur > tgt ? "↓ reduce" : cur < tgt ? "↑ increase" : "ok";
         rulesHtml += `<div class="rule-row">
-          <span class="rule-key">${esc(cid)}</span>
+          <span class="rule-key">${esc(nameFor(cid))}</span>
           <span class="rule-val" style="display:flex;gap:8px;align-items:center;">
             <span style="color:var(--text2);">${cur.toFixed(1)}%</span>
             <span style="color:var(--text2);">→</span>
@@ -866,7 +875,7 @@ async function loadPriceAlerts() {
           <div class="alert-row" id="alert-row-${a.id}">
             <div class="alert-row-coin">
               <span class="alert-symbol">${esc(SYMBOLS[a.coin_id] || a.symbol)}</span>
-              <span class="alert-coin-id">${esc(a.coin_id)}</span>
+              <span class="alert-coin-id">${esc(nameFor(a.coin_id))}</span>
             </div>
             <div class="alert-row-condition">
               <span class="alert-badge ${esc(a.condition)}">${a.condition === "above" ? "Above" : "Below"}</span>
@@ -890,7 +899,7 @@ async function loadPriceAlerts() {
           <div class="alert-row triggered">
             <div class="alert-row-coin">
               <span class="alert-symbol">${esc(SYMBOLS[a.coin_id] || a.symbol)}</span>
-              <span class="alert-coin-id">${esc(a.coin_id)}</span>
+              <span class="alert-coin-id">${esc(nameFor(a.coin_id))}</span>
             </div>
             <div class="alert-row-condition">
               <span class="alert-badge ${esc(a.condition)}">${a.condition === "above" ? "Above" : "Below"}</span>
@@ -945,7 +954,7 @@ async function loadTrades() {
             </tr></thead>
             <tbody>
               ${pnl.map(p => `<tr>
-                <td><strong>${esc(p.symbol)}</strong> <span style="color:var(--text2);font-size:11px;">${esc(p.coin_id)}</span></td>
+                <td><strong>${esc(p.symbol)}</strong> <span style="color:var(--text2);font-size:11px;">${esc(nameFor(p.coin_id))}</span></td>
                 <td>$${p.total_bought.toLocaleString("en",{maximumFractionDigits:2})}</td>
                 <td>$${p.total_sold.toLocaleString("en",{maximumFractionDigits:2})}</td>
                 <td class="${p.realised_pnl >= 0 ? 'up' : 'down'}">
@@ -1366,18 +1375,18 @@ async function loadNews(coin) {
 
   const grid = document.getElementById("newsGrid");
   if (!grid) return;
-  grid.innerHTML = '<div class="empty-state">Loading news…</div>';
+  grid.innerHTML = '<div class="empty-state">Loading market updates…</div>';
 
   try {
     const url  = `/api/news${_newsCoin ? "?coin=" + _newsCoin : ""}`;
     const data = await fetch(url).then(r => r.json());
 
     if (data.error) {
-      grid.innerHTML = `<div class="empty-state">Could not load news: ${esc(data.error)}</div>`;
+      grid.innerHTML = `<div class="empty-state">Could not load market updates: ${esc(data.error)}</div>`;
       return;
     }
     if (!data.length) {
-      grid.innerHTML = '<div class="empty-state">No news found for this filter.</div>';
+      grid.innerHTML = '<div class="empty-state">No market updates for this filter.</div>';
       return;
     }
 
@@ -1391,7 +1400,7 @@ async function loadNews(coin) {
       const ago   = _timeAgo(n.published);
       return `<div class="news-card">
         <div class="news-meta">
-          <span class="news-source">${esc(n.source || "News")}</span>
+          <span class="news-source">${esc(n.source || "Auto-generated")}</span>
           <span class="news-time">${ago}</span>
           <span class="news-sentiment ${sentClass}">${sentLabel}</span>
           <span style="margin-left:auto;display:flex;gap:4px;">${coins}</span>
@@ -1405,7 +1414,7 @@ async function loadNews(coin) {
       </div>`;
     }).join("");
   } catch(e) {
-    grid.innerHTML = `<div class="empty-state">Failed to load news. Check your connection.</div>`;
+    grid.innerHTML = `<div class="empty-state">Could not load market updates. Check your connection.</div>`;
   }
 }
 
@@ -1610,7 +1619,7 @@ document.getElementById("saveAlertBtn")?.addEventListener("click", async () => {
     });
     const data = await res.json();
     if (data.ok) {
-      toast(`Alert set: ${coin_id} ${condition} $${parseFloat(target).toLocaleString()}`, "success");
+      toast(`Alert set: ${nameFor(coin_id)} ${condition} $${parseFloat(target).toLocaleString()}`, "success");
       document.getElementById("alertTarget").value = "";
       document.getElementById("alertNote").value   = "";
       loadPriceAlerts();

@@ -124,8 +124,6 @@ button:disabled { opacity: .55; cursor: default; }
 .strength-bar { flex: 1; height: 3px; background: var(--bg4); }
 .strength-fill { height: 100%; width: 0; transition: width var(--transition), background var(--transition); }
 .strength-text { font-size: 11px; color: var(--text2); min-width: 108px; text-align: right; }
-.demo-hint { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text2); }
-.demo-hint code { font-family: var(--font-mono); color: var(--text0); background: var(--bg3); padding: 1px 6px; border-radius: 3px; }
 .success-overlay { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg0); opacity: 0; visibility: hidden; transition: opacity var(--transition); z-index: 200; }
 .success-overlay.show { opacity: 1; visibility: visible; }
 .success-content { width: 240px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
@@ -234,6 +232,7 @@ button:disabled { opacity: .55; cursor: default; }
 .alert-change { margin-left: auto; font: 500 11px var(--font-mono); }
 
 /* ── News ───────────────────────────────────────────────── */
+.section-note { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
 .news-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .news-list, #newsGrid { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
 .news-card { padding: 13px 2px; border-bottom: 1px solid var(--border); }
